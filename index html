@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard PJOK Inklusif - Bintaro 04</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; }
+        .toast-enter { animation: slideIn 0.3s forwards; }
+        .toast-exit { animation: slideOut 0.3s forwards; }
+        @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        @keyframes slideOut { from { transform: translateX(0); opacity: 1; } to { transform: translateX(100%); opacity: 0; } }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+    </style>
+</head>
+<body class="h-screen flex flex-col">
+
+    <header class="bg-blue-600 text-white shadow-md">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="bg-white text-blue-600 p-2 rounded-lg">
+                    <i class="fas fa-running text-xl"></i>
+                </div>
+                <div>
+                    <h1 class="text-lg font-bold leading-tight">EduTrack PJOK</h1>
+                    <p class="text-xs text-blue-200">SDN Bintaro 04 Pagi - Pendekatan Inklusif</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-4">
+                <!-- Header Kanan (Lencana Sinkron & Materi) -->
+                <div class="hidden sm:flex flex-col items-end">
+                    <div class="flex items-center gap-2">
+                        <span class="text-sm font-semibold">Semester Ganjil 2026/2027</span>
+                        <!-- Status Sinkron -->
+                        <span id="syncStatus" class="text-[10px] bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full font-medium border border-yellow-200 shadow-sm flex items-center gap-1 transition-all">
+                            <i class="fas fa-spinner fa-spin"></i> Menghubungkan...
+                        </span>
+                    </div>
+                    <!-- Label Materi Dinamis -->
+                    <span id="headerTopic" class="text-xs text-blue-200 bg-blue-700 px-2 py-0.5 rounded-full mt-0.5 truncate max-w-[200px]">Memuat Topik...</span>
+                </div>
+                <div class="w-8 h-8 rounded-full bg-blue-400 flex items-center justify-center border-2 border-white cursor-pointer hover:bg-blue-500 transition" title="Profil Guru">
+                    <i class="fas fa-user"></i>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 w-full flex flex-col md:flex-row gap-6 overflow-hidden">
+        
+        <!-- Left Column: Student List -->
+        <div class="w-full md:w-1/3 bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col h-[400px] md:h-full">
+            <div class="p-4 border-b border-gray-200 flex justify-between items-center bg-gray-50 rounded-t-xl">
+                <!-- Dropdown Pilihan Kelas -->
+                <select id="classSelector" class="font-semibold text-gray-700 bg-transparent border-none focus:ring-0 cursor-pointer text-lg p-0 outline-none hover:text-blue-600 transition-colors" onchange="changeClass(this.value)">
+                    <option value="1A">Kelas 1A</option>
+                    <option value="1B">Kelas 1B</option>
+                    <option value="1C">Kelas 1C</option>
+                    <option value="3A">Kelas 3A</option>
+                    <option value="3B">Kelas 3B</option>
+                    <option value="5A" selected>Kelas 5A</option>
+                    <option value="5B">Kelas 5B</option>
+                </select>
+                <span class="bg-blue-100 text-blue-700 text-xs px-2 py-1 rounded-full font-medium" id="studentCount">0 Siswa</span>
+            </div>
+            <div class="p-4 border-b border-gray-100">
+                <div class="relative">
+                    <i class="fas fa-search absolute left-3 top-3 text-gray-400"></i>
+                    <input type="text" id="searchInput" placeholder="Cari nama siswa..." class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-shadow">
+                </div>
+            </div>
+            <div class="overflow-y-auto flex-1 p-2 space-y-1" id="studentList">
+                <!-- Students injected by JS -->
+            </div>
+        </div>
+
+        <!-- Right Column: Dashboard & Chart -->
+        <div class="w-full md:w-2/3 flex flex-col gap-6 h-auto md:h-full overflow-y-auto pb-10 md:pb-0">
+            
+            <!-- Student Detail Header -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 flex flex-col gap-4">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                    <div class="flex items-center gap-4">
+                        <div class="w-16 h-16 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-500 text-2xl font-bold shadow-inner" id="detailAvatar">
+                            ?
+                        </div>
+                        <div>
+                            <h2 class="text-xl font-bold text-gray-800" id="detailName">Memuat...</h2>
+                            <div class="flex items-center gap-2 mt-1 flex-wrap">
+                                <span class="text-sm text-gray-500" id="detailNis">NIS: -</span>
+                                <span class="px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600" id="detailStatus">Status</span>
+                                <span class="px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700 hidden" id="detailProgressBadge">
+                                    <i class="fas fa-arrow-trend-up mr-1"></i> Berkembang Pesat
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    <button onclick="sendReport()" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 shadow-sm shrink-0">
+                        <i class="fas fa-paper-plane"></i> Kirim Laporan Orang Tua
+                    </button>
+                </div>
+                
+                <!-- Diferensiasi Target -->
+                <div class="mt-2 p-3 bg-indigo-50 border border-indigo-100 rounded-lg relative overflow-hidden">
+                    <div class="absolute -right-4 -top-4 text-indigo-100 opacity-50">
+                        <i class="fas fa-bullseye text-6xl"></i>
+                    </div>
+                    <h4 class="text-xs font-bold text-indigo-800 uppercase tracking-wider mb-1 relative z-10"><i class="fas fa-bullseye mr-1"></i> Target Pembelajaran (Diferensiasi)</h4>
+                    <p class="text-sm text-indigo-900 relative z-10" id="detailObjective">Memuat target...</p>
+                </div>
+            </div>
+
+            <!-- Chart Section -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 flex-1 flex flex-col min-h-[300px]">
+                <div class="flex justify-between items-center mb-4">
+                    <div>
+                        <h3 class="font-semibold text-gray-700">Grafik Perkembangan Formatif (Skala 1-4)</h3>
+                        <p class="text-xs text-gray-500">1: Perlu Bimbingan | 2: Cukup | 3: Baik | 4: Sangat Baik</p>
+                    </div>
+                    <select class="text-sm border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 p-1 bg-gray-50">
+                        <option>Bulan Ini</option>
+                        <option>Semester Ini</option>
+                    </select>
+                </div>
+                <div class="relative flex-1 w-full h-full">
+                    <canvas id="progressChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Quick Input Section -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <h3 class="font-semibold text-gray-700 mb-4 border-b pb-2">Input Nilai Observasi Mingguan</h3>
+                
+                <!-- Rubrik Penilaian Collapsible -->
+                <details class="mb-5 group">
+                    <summary class="cursor-pointer text-sm font-medium text-blue-700 bg-blue-50 px-4 py-2.5 rounded-lg hover:bg-blue-100 transition-colors flex items-center justify-between border border-blue-100 select-none">
+                        <span><i class="fas fa-list-check mr-2"></i>Panduan Matriks Penilaian Dinamis (Klik Buka/Tutup)</span>
+                        <i class="fas fa-chevron-down group-open:rotate-180 transition-transform duration-300"></i>
+                    </summary>
+                    <div class="mt-3 overflow-x-auto border border-gray-200 rounded-lg shadow-sm">
+                        <table class="w-full text-xs text-left text-gray-600 min-w-[700px]">
+                            <thead class="bg-gray-50 text-gray-700 font-semibold">
+                                <tr>
+                                    <th class="p-3 border-b border-r w-1/5">Indikator</th>
+                                    <th class="p-3 border-b border-r w-1/5 bg-red-50/50 text-red-700">1 (Perlu Pendampingan)</th>
+                                    <th class="p-3 border-b border-r w-1/5 bg-yellow-50/50 text-yellow-700">2 (Cukup)</th>
+                                    <th class="p-3 border-b border-r w-1/5 bg-blue-50/50 text-blue-700">3 (Baik)</th>
+                                    <th class="p-3 border-b w-1/5 bg-green-50/50 text-green-700">4 (Sangat Baik)</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-200" id="rubricBody">
+                                <!-- Rubrik dimasukkan via JS secara Dinamis berdasarkan Kelas -->
+                                <tr><td colspan="5" class="p-4 text-center">Memuat matriks penilaian...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </details>
+
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 items-end mb-4">
+                    <div>
+                        <!-- Label di update via JS sesuai Indikator matriks -->
+                        <label class="block text-xs font-medium text-gray-600 mb-1" id="labelIndikator0">Indikator 1</label>
+                        <input type="number" id="inputTaktis" min="1" max="4" placeholder="1-4" class="w-full p-2 border border-gray-300 rounded-lg text-sm focus:ring-blue-500 focus:border-blue-500 transition-colors">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-600 mb-1" id="labelIndikator1">Indikator 2</label>
+                        <input type="number" id="inputUsaha" min="1" max="4" placeholder="1-4" class="w-full p-2 border border-gray-300 rounded-lg text-sm focus:ring-blue-500 focus:border-blue-500 transition-colors">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-600 mb-1" id="labelIndikator2">Indikator 3</label>
+                        <input type="number" id="inputFisik" min="1" max="4" placeholder="1-4" class="w-full p-2 border border-gray-300 rounded-lg text-sm focus:ring-blue-500 focus:border-blue-500 transition-colors">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-600 mb-1" id="labelIndikator3">Indikator 4</label>
+                        <input type="number" id="inputKerjasama" min="1" max="4" placeholder="1-4" class="w-full p-2 border border-gray-300 rounded-lg text-sm focus:ring-blue-500 focus:border-blue-500 transition-colors">
+                    </div>
+                </div>
+
+                <!-- Qualitative Note -->
+                <div class="mb-4">
+                    <label class="block text-xs font-medium text-gray-600 mb-1">Catatan Kualitatif / Temuan Guru (Opsional)</label>
+                    <textarea id="inputCatatan" rows="2" class="w-full p-2 border border-gray-300 rounded-lg text-sm focus:ring-blue-500 focus:border-blue-500 transition-colors" placeholder="Misal: Siswa mulai berani berkolaborasi..."></textarea>
+                </div>
+
+                <div class="flex flex-col sm:flex-row justify-between items-center gap-4 mt-2">
+                    <p class="text-xs text-gray-400 italic bg-gray-50 p-2 rounded w-full sm:w-auto">
+                        <i class="fas fa-info-circle mr-1"></i> Penilaian bersifat <strong>self-referenced</strong> (membandingkan kemajuan individu).
+                    </p>
+                    <button onclick="addScore()" class="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-lg text-sm font-medium transition-colors shadow-md flex items-center justify-center gap-2">
+                        <i class="fas fa-save"></i> Simpan Observasi
+                    </button>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- Toast Notification Container -->
+    <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2"></div>
+
+    <script>
+        // =========================================================
+        // MASUKKAN LINK URL WEB APP GOOGLE APPS SCRIPT ANDA DI SINI
+        // =========================================================
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwbAo5fSn6CbJPPi8H5seGPEed0SkiLfVGlPQntGdQSdAnAd7ruxgg5viEjvz6VCAyaIA/exec";
+        
+        let studentsData = []; 
+        let classInfoData = {};
+        let currentStudentId = null;
+        let currentClass = "5A"; 
+        let chartInstance = null;
+
+        // Inisialisasi Aplikasi (Fetch Data)
+        async function init() {
+            try {
+                // Fetch data dari Google Sheets API (Code.gs)
+                const response = await fetch(SCRIPT_URL);
+                const result = await response.json();
+                
+                if (result.status === "success") {
+                    studentsData = result.data.students;
+                    classInfoData = result.data.classInfo;
+                    
+                    // Update lencana status UI menjadi Sinkron
+                    const syncBadge = document.getElementById("syncStatus");
+                    syncBadge.className = "text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-bold border border-green-200 shadow-sm flex items-center gap-1 transition-all";
+                    syncBadge.innerHTML = `<i class="fas fa-check-circle"></i> Sinkron`;
+                    showToast("Berhasil Terhubung", "Data tersinkronisasi otomatis dengan Google Sheets.", "success");
+                }
+            } catch (error) {
+                // Tangani Error Koneksi
+                const syncBadge = document.getElementById("syncStatus");
+                syncBadge.className = "text-[10px] bg-red-100 text-red-700 px-2 py-0.5 rounded-full font-bold border border-red-200 shadow-sm flex items-center gap-1 transition-all";
+                syncBadge.innerHTML = `<i class="fas fa-times-circle"></i> Gagal Sinkron`;
+                showToast("Koneksi Gagal", "Pastikan URL Google Apps Script sudah benar.", "error");
+                console.error("Fetch error:", error);
+            }
+
+            // Setelah fetch selesai, proses UI untuk kelas aktif
+            changeClass(currentClass);
+
+            // Fitur Pencarian
+            document.getElementById('searchInput').addEventListener('input', (e) => {
+                const term = e.target.value.toLowerCase();
+                const filtered = studentsData.filter(s => s.kelas === currentClass && s.name.toLowerCase().includes(term));
+                renderStudentList(filtered);
+            });
+        }
+
+        // Fitur Mengganti Kelas via Dropdown
+        function changeClass(className) {
+            currentClass = className;
+            document.getElementById('searchInput').value = ''; // Reset pencarian
+            
+            // 1. Update Topik, Matriks, dan Label sesuai Kelas
+            updateClassUI(className);
+
+            // 2. Render Siswa
+            const filteredStudents = studentsData.filter(s => s.kelas === className);
+            document.getElementById('studentCount').innerText = `${filteredStudents.length} Siswa`;
+            renderStudentList(filteredStudents);
+            
+            // 3. Auto-pilih siswa pertama di kelas tersebut
+            if(filteredStudents.length > 0) {
+                selectStudent(filteredStudents[0].id);
+            } else {
+                document.getElementById('detailName').innerText = "Belum Ada Data Siswa";
+                document.getElementById('detailObjective').innerText = "-";
+                document.getElementById('detailAvatar').innerText = "?";
+                if(chartInstance) chartInstance.destroy(); // Kosongkan grafik
+            }
+        }
+
+        // FUNGSI BARU: Update Topik dan Matriks Berdasarkan Kelas
+        function updateClassUI(className) {
+            const classData = classInfoData[className];
+            const topicSpan = document.getElementById('headerTopic');
+            const rubricBody = document.getElementById('rubricBody');
+
+            if (classData) {
+                // A. Update Topik di Header
+                topicSpan.innerText = `Topik: ${classData.materi}`;
+
+                // B. Update Tabel Matriks Dinamis
+                rubricBody.innerHTML = '';
+                if (classData.rubrik && classData.rubrik.length > 0) {
+                    classData.rubrik.forEach((item, index) => {
+                        rubricBody.innerHTML += `
+                            <tr class="hover:bg-gray-50 transition-colors">
+                                <td class="p-3 border-r font-medium text-gray-700 bg-gray-50/30">${item.indikator}</td>
+                                <td class="p-3 border-r">${item.skor1}</td>
+                                <td class="p-3 border-r">${item.skor2}</td>
+                                <td class="p-3 border-r">${item.skor3}</td>
+                                <td class="p-3">${item.skor4}</td>
+                            </tr>
+                        `;
+                        // C. Update Label Input (Max 4)
+                        if (index < 4) {
+                            document.getElementById(`labelIndikator${index}`).innerText = item.indikator;
+                        }
+                    });
+                } else {
+                    rubricBody.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-gray-500">Matriks belum diatur di Database untuk materi ini.</td></tr>`;
+                }
+            } else {
+                topicSpan.innerText = `Topik: Belum Ditentukan`;
+                rubricBody.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-gray-500">Data tidak ditemukan untuk kelas ${className}</td></tr>`;
+            }
+        }
+
+        // Render Daftar Siswa
+        function renderStudentList(data) {
+            const container = document.getElementById('studentList');
+            container.innerHTML = '';
+            
+            if (data.length === 0) {
+                container.innerHTML = `<div class="p-6 text-center text-gray-400 text-sm"><i class="fas fa-folder-open text-2xl mb-2"></i><br>Kosong</div>`;
+                return;
+            }
+
+            data.forEach(student => {
+                const isActive = student.id === currentStudentId ? 'bg-blue-50 border-blue-200' : 'hover:bg-gray-50 border-transparent';
+                const el = document.createElement('div');
+                el.className = `p-3 rounded-lg border cursor-pointer transition-colors flex flex-col gap-1 shadow-sm ${isActive}`;
+                el.onclick = () => selectStudent(student.id);
+                el.innerHTML = `
+                    <div class="font-medium text-gray-800 text-sm">${student.name}</div>
+                    <div class="flex items-center justify-between mt-1">
+                        <span class="text-xs text-gray-500 font-mono">${student.nis}</span>
+                        <span class="text-[10px] px-2 py-0.5 rounded-full ${student.color} truncate max-w-[120px]">${student.status}</span>
+                    </div>
+                `;
+                container.appendChild(el);
+            });
+        }
+
+        // Cek Progres
+        function checkProgress(student) {
+            if(!student || !student.scores || student.scores.labels.length < 2) return false;
+            const firstWeekTotal = student.scores.taktis[0] + student.scores.usaha[0] + student.scores.fisik[0] + student.scores.kerjasama[0];
+            const lastIdx = student.scores.labels.length - 1;
+            const lastWeekTotal = student.scores.taktis[lastIdx] + student.scores.usaha[lastIdx] + student.scores.fisik[lastIdx] + student.scores.kerjasama[lastIdx];
+            return (lastWeekTotal - firstWeekTotal) >= 3;
+        }
+
+        // Pilih Siswa
+        function selectStudent(id) {
+            currentStudentId = id;
+            const student = studentsData.find(s => s.id === id);
+            if(!student) return;
+            
+            // Render list ulang untuk highlight
+            const term = document.getElementById('searchInput').value.toLowerCase();
+            renderStudentList(studentsData.filter(s => s.kelas === currentClass && s.name.toLowerCase().includes(term)));
+
+            // Update UI Detail
+            document.getElementById('detailName').innerText = student.name;
+            document.getElementById('detailNis').innerText = `NIS: ${student.nis}`;
+            document.getElementById('detailStatus').innerText = student.status;
+            document.getElementById('detailStatus').className = `px-2 py-0.5 rounded-full text-xs font-medium ${student.color}`;
+            document.getElementById('detailAvatar').innerText = student.name.charAt(0);
+            document.getElementById('detailObjective').innerText = student.objective;
+
+            // Update Badge
+            const badge = document.getElementById('detailProgressBadge');
+            if(checkProgress(student)) badge.classList.remove('hidden');
+            else badge.classList.add('hidden');
+
+            updateChart(student);
+        }
+
+        // Update Chart Berdasarkan Indikator Dinamis
+        function updateChart(student) {
+            const ctx = document.getElementById('progressChart').getContext('2d');
+            if (chartInstance) chartInstance.destroy();
+
+            // Mengambil nama label dari UI yang sudah update dinamis
+            const lbl1 = document.getElementById('labelIndikator0').innerText;
+            const lbl2 = document.getElementById('labelIndikator1').innerText;
+            const lbl3 = document.getElementById('labelIndikator2').innerText;
+            const lbl4 = document.getElementById('labelIndikator3').innerText;
+
+            chartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: student.scores.labels,
+                    datasets: [
+                        { label: lbl1, data: student.scores.taktis, borderColor: '#3b82f6', backgroundColor: 'rgba(59, 130, 246, 0.1)', borderWidth: 2, tension: 0.3, fill: false, pointBackgroundColor: '#3b82f6' },
+                        { label: lbl2, data: student.scores.usaha, borderColor: '#f59e0b', backgroundColor: 'rgba(245, 158, 11, 0.1)', borderWidth: 2, tension: 0.3, fill: false, pointBackgroundColor: '#f59e0b' },
+                        { label: lbl3, data: student.scores.fisik, borderColor: '#10b981', backgroundColor: 'rgba(16, 185, 129, 0.1)', borderWidth: 2, tension: 0.3, fill: false, pointBackgroundColor: '#10b981' },
+                        { label: lbl4, data: student.scores.kerjasama, borderColor: '#8b5cf6', backgroundColor: 'rgba(139, 92, 246, 0.1)', borderWidth: 2, tension: 0.3, fill: false, pointBackgroundColor: '#8b5cf6' }
+                    ]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { position: 'bottom', labels: { usePointStyle: true, boxWidth: 6, font: {family: "'Inter', sans-serif", size: 10} } }, tooltip: { mode: 'index', intersect: false } },
+                    scales: { y: { min: 0, max: 4, ticks: { stepSize: 1 } }, x: { grid: { display: false } } },
+                    interaction: { mode: 'nearest', axis: 'x', intersect: false }
+                }
+            });
+        }
+
+        // Simpan Observasi
+        function addScore() {
+            const s1 = parseInt(document.getElementById('inputTaktis').value);
+            const s2 = parseInt(document.getElementById('inputUsaha').value);
+            const s3 = parseInt(document.getElementById('inputFisik').value);
+            const s4 = parseInt(document.getElementById('inputKerjasama').value);
+            const catatan = document.getElementById('inputCatatan').value;
+
+            if (!s1 || !s2 || !s3 || !s4 || s1 < 1 || s1 > 4 || s2 < 1 || s2 > 4 || s3 < 1 || s3 > 4 || s4 < 1 || s4 > 4) {
+                showToast("Validasi Gagal", "Pastikan semua nilai diisi dengan skala 1 sampai 4.", "error");
+                return;
+            }
+
+            const student = studentsData.find(s => s.id === currentStudentId);
+            const newLabel = `Mg ${student.scores.labels.length + 1}`;
+            
+            student.scores.labels.push(newLabel);
+            student.scores.taktis.push(s1);
+            student.scores.usaha.push(s2);
+            student.scores.fisik.push(s3);
+            student.scores.kerjasama.push(s4);
+            
+            if (catatan.trim() !== "") student.notes.push(`${newLabel}: ${catatan}`);
+
+            // Reset Form
+            document.getElementById('inputTaktis').value = ''; document.getElementById('inputUsaha').value = '';
+            document.getElementById('inputFisik').value = ''; document.getElementById('inputKerjasama').value = '';
+            document.getElementById('inputCatatan').value = '';
+
+            selectStudent(currentStudentId); 
+            if (checkProgress(student)) showToast("Luar Biasa!", `Peningkatan signifikan pada profil ${student.name}.`, "success");
+            else showToast("Tersimpan", "Data observasi mingguan berhasil ditambahkan.", "success");
+        }
+
+        // Kirim Laporan
+        function sendReport() {
+            const student = studentsData.find(s => s.id === currentStudentId);
+            showToast("Memproses Analisis...", `Menyusun laporan untuk ${student.name}...`, "info");
+            setTimeout(() => { showToast("Terkirim", `Laporan terkirim ke WhatsApp Orang Tua!`, "success"); }, 2000);
+        }
+
+        // Sistem Toast
+        function showToast(title, message, type = 'info') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            let icon = 'fa-info-circle text-blue-500'; let border = 'border-blue-500'; let bgIcon = 'bg-blue-100';
+            if (type === 'success') { icon = 'fa-check text-green-600'; border = 'border-green-500'; bgIcon = 'bg-green-100'; }
+            if (type === 'error') { icon = 'fa-exclamation text-red-600'; border = 'border-red-500'; bgIcon = 'bg-red-100'; }
+
+            toast.className = `bg-white px-4 py-3 rounded-xl shadow-xl border-l-4 ${border} flex items-start gap-3 w-80 md:w-96 toast-enter`;
+            toast.innerHTML = `<div class="${bgIcon} w-8 h-8 rounded-full flex items-center justify-center shrink-0 mt-0.5"><i class="fas ${icon} text-sm"></i></div><div class="flex-1"><h4 class="text-sm font-bold text-gray-800">${title}</h4><p class="text-xs text-gray-600 mt-1 leading-relaxed">${message}</p></div><button onclick="this.parentElement.remove()" class="text-gray-400 hover:text-gray-700 transition"><i class="fas fa-times"></i></button>`;
+            
+            container.appendChild(toast);
+            setTimeout(() => { if(toast.parentElement) { toast.classList.replace('toast-enter', 'toast-exit'); setTimeout(() => toast.remove(), 300); } }, 5000);
+        }
+
+        window.onload = init;
+    </script>
+</body>
+</html>
