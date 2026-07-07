@@ -18,6 +18,8 @@
         ::-webkit-scrollbar-track { background: #f1f1f1; }
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
         ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        .fade-in { animation: fadeIn 0.3s ease-in; }
+        @keyframes fadeIn { from { opacity: 0.5; transform: scale(0.98); } to { opacity: 1; transform: scale(1); } }
     </style>
 </head>
 <body class="h-screen flex flex-col">
@@ -34,17 +36,19 @@
                 </div>
             </div>
             <div class="flex items-center gap-4">
-                <!-- Header Kanan (Lencana Sinkron & Materi) -->
                 <div class="hidden sm:flex flex-col items-end">
                     <div class="flex items-center gap-2">
                         <span class="text-sm font-semibold">Semester Ganjil 2026/2027</span>
-                        <!-- Status Sinkron -->
                         <span id="syncStatus" class="text-[10px] bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full font-medium border border-yellow-200 shadow-sm flex items-center gap-1 transition-all">
                             <i class="fas fa-spinner fa-spin"></i> Menghubungkan...
                         </span>
                     </div>
-                    <!-- Label Materi Dinamis -->
-                    <span id="headerTopic" class="text-xs text-blue-200 bg-blue-700 px-2 py-0.5 rounded-full mt-0.5 truncate max-w-[200px]">Memuat Topik...</span>
+                    <div class="flex items-center gap-2 mt-0.5">
+                        <i class="fas fa-book-open text-blue-200 text-xs"></i>
+                        <select id="topicSelector" onchange="changeTopic(this.value)" class="text-xs text-blue-800 bg-white border border-blue-300 hover:bg-blue-50 focus:ring-2 focus:ring-blue-300 px-3 py-1 rounded-full outline-none cursor-pointer max-w-[200px] sm:max-w-[250px] font-semibold transition-all shadow-sm truncate">
+                            <option value="">Memuat Topik...</option>
+                        </select>
+                    </div>
                 </div>
                 <div class="w-8 h-8 rounded-full bg-blue-400 flex items-center justify-center border-2 border-white cursor-pointer hover:bg-blue-500 transition" title="Profil Guru">
                     <i class="fas fa-user"></i>
@@ -55,18 +59,11 @@
 
     <main class="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 w-full flex flex-col md:flex-row gap-6 overflow-hidden">
         
-        <!-- Left Column: Student List -->
         <div class="w-full md:w-1/3 bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col h-[400px] md:h-full">
             <div class="p-4 border-b border-gray-200 flex justify-between items-center bg-gray-50 rounded-t-xl">
-                <!-- Dropdown Pilihan Kelas -->
                 <select id="classSelector" class="font-semibold text-gray-700 bg-transparent border-none focus:ring-0 cursor-pointer text-lg p-0 outline-none hover:text-blue-600 transition-colors" onchange="changeClass(this.value)">
                     <option value="1A">Kelas 1A</option>
-                    <option value="1B">Kelas 1B</option>
-                    <option value="1C">Kelas 1C</option>
-                    <option value="3A">Kelas 3A</option>
-                    <option value="3B">Kelas 3B</option>
                     <option value="5A" selected>Kelas 5A</option>
-                    <option value="5B">Kelas 5B</option>
                 </select>
                 <span class="bg-blue-100 text-blue-700 text-xs px-2 py-1 rounded-full font-medium" id="studentCount">0 Siswa</span>
             </div>
@@ -77,68 +74,89 @@
                 </div>
             </div>
             <div class="overflow-y-auto flex-1 p-2 space-y-1" id="studentList">
-                <!-- Students injected by JS -->
             </div>
         </div>
 
-        <!-- Right Column: Dashboard & Chart -->
         <div class="w-full md:w-2/3 flex flex-col gap-6 h-auto md:h-full overflow-y-auto pb-10 md:pb-0">
             
-            <!-- Student Detail Header -->
             <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 flex flex-col gap-4">
                 <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                     <div class="flex items-center gap-4">
-                        <div class="w-16 h-16 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-500 text-2xl font-bold shadow-inner" id="detailAvatar">
-                            ?
-                        </div>
+                        <div class="w-16 h-16 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-500 text-2xl font-bold shadow-inner" id="detailAvatar">?</div>
                         <div>
                             <h2 class="text-xl font-bold text-gray-800" id="detailName">Memuat...</h2>
                             <div class="flex items-center gap-2 mt-1 flex-wrap">
                                 <span class="text-sm text-gray-500" id="detailNis">NIS: -</span>
                                 <span class="px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600" id="detailStatus">Status</span>
-                                <span class="px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700 hidden" id="detailProgressBadge">
-                                    <i class="fas fa-arrow-trend-up mr-1"></i> Berkembang Pesat
-                                </span>
+                            </div>
+                            <div class="flex items-center gap-2 mt-2 flex-wrap" id="attendanceStats">
+                                <span class="bg-green-100 text-green-700 px-2 py-0.5 rounded-md text-[11px] font-bold border border-green-200 shadow-sm"><i class="fas fa-check-circle mr-1"></i>Hadir: <span id="statHadir">0%</span></span>
+                                <span class="bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-md text-[11px] font-bold border border-yellow-200 shadow-sm"><i class="fas fa-envelope mr-1"></i>Izin/Sakit: <span id="statIzin">0%</span></span>
+                                <span class="bg-red-100 text-red-700 px-2 py-0.5 rounded-md text-[11px] font-bold border border-red-200 shadow-sm"><i class="fas fa-times-circle mr-1"></i>Alpa: <span id="statAlpa">0%</span></span>
                             </div>
                         </div>
                     </div>
-                    <button onclick="sendReport()" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 shadow-sm shrink-0">
-                        <i class="fas fa-paper-plane"></i> Kirim Laporan Orang Tua
+                    
+                    <div class="flex flex-wrap items-center gap-3 shrink-0 bg-gray-50 p-2 rounded-xl border border-gray-200">
+                        <div class="flex items-center gap-2">
+                            <!-- Dropdown untuk Cetak Rekap Kelas -->
+                            <select id="rekapClassDropdown" class="text-xs border border-gray-300 rounded-md py-1.5 px-2 outline-none font-semibold text-teal-700 bg-white focus:ring-1 focus:ring-teal-500 cursor-pointer">
+                            </select>
+                            <button id="btnCetakRaporKelas" onclick="cetakRaporKelas()" class="bg-teal-500 hover:bg-teal-600 text-white px-3 py-1.5 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 shadow-sm" title="Cetak Rekap Seluruh Murid di Kelas Ini">
+                                <i class="fas fa-users"></i> <span class="hidden sm:inline">Rekap Kelas</span>
+                            </button>
+                        </div>
+                        
+                        <div class="w-px h-6 bg-gray-300 hidden sm:block"></div>
+                        
+                        <button id="btnCetakRapor" onclick="cetakRapor()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 shadow-sm" title="Cetak Rapor Individu Siswa">
+                            <i class="fas fa-user-graduate"></i> <span class="hidden sm:inline">Rapor Individu</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="mt-4 p-4 bg-emerald-50 border border-emerald-200 rounded-lg flex flex-col sm:flex-row items-end gap-4 shadow-sm">
+                    <div class="flex-1 w-full">
+                        <label class="text-xs font-bold text-emerald-800 mb-1 block"><i class="far fa-calendar-alt"></i> Tanggal Pertemuan</label>
+                        <input type="date" id="inputTanggal" class="w-full border-emerald-300 rounded-md text-sm p-2 outline-none shadow-sm focus:ring-emerald-500 focus:border-emerald-500 text-gray-700">
+                    </div>
+                    <div class="flex-1 w-full">
+                        <label class="text-xs font-bold text-emerald-800 mb-1 block"><i class="fas fa-user-check"></i> Status Kehadiran</label>
+                        <select id="inputKehadiran" class="w-full border-emerald-300 rounded-md text-sm p-2 outline-none shadow-sm focus:ring-emerald-500 focus:border-emerald-500 text-gray-700 font-semibold">
+                            <option value="Hadir">Hadir</option>
+                            <option value="Izin">Izin</option>
+                            <option value="Sakit">Sakit</option>
+                            <option value="Alpa">Alpa</option>
+                        </select>
+                    </div>
+                    <button id="btnSaveAbsensi" onclick="addAttendance()" class="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2 rounded-md text-sm font-bold transition-all shadow-md flex items-center justify-center gap-2">
+                        <i class="fas fa-save"></i> Simpan Absensi
                     </button>
                 </div>
                 
-                <!-- Diferensiasi Target -->
                 <div class="mt-2 p-3 bg-indigo-50 border border-indigo-100 rounded-lg relative overflow-hidden">
-                    <div class="absolute -right-4 -top-4 text-indigo-100 opacity-50">
-                        <i class="fas fa-bullseye text-6xl"></i>
-                    </div>
-                    <h4 class="text-xs font-bold text-indigo-800 uppercase tracking-wider mb-1 relative z-10"><i class="fas fa-bullseye mr-1"></i> Target Pembelajaran (Diferensiasi)</h4>
+                    <div class="absolute -right-4 -top-4 text-indigo-100 opacity-50"><i class="fas fa-bullseye text-6xl"></i></div>
+                    <h4 class="text-xs font-bold text-indigo-800 uppercase tracking-wider mb-1 relative z-10"><i class="fas fa-bullseye mr-1"></i> Target Pembelajaran Diferensiasi</h4>
                     <p class="text-sm text-indigo-900 relative z-10" id="detailObjective">Memuat target...</p>
                 </div>
             </div>
 
-            <!-- Chart Section -->
-            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 flex-1 flex flex-col min-h-[300px]">
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 flex-1 flex flex-col min-h-[250px]">
                 <div class="flex justify-between items-center mb-4">
                     <div>
-                        <h3 class="font-semibold text-gray-700">Grafik Perkembangan Formatif (Skala 1-4)</h3>
-                        <p class="text-xs text-gray-500">1: Perlu Bimbingan | 2: Cukup | 3: Baik | 4: Sangat Baik</p>
+                        <h3 class="font-semibold text-gray-700">Grafik Perkembangan Penilaian</h3>
                     </div>
-                    <select class="text-sm border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 p-1 bg-gray-50">
-                        <option>Bulan Ini</option>
-                        <option>Semester Ini</option>
-                    </select>
                 </div>
                 <div class="relative flex-1 w-full h-full">
                     <canvas id="progressChart"></canvas>
                 </div>
             </div>
 
-            <!-- Quick Input Section -->
-            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                <h3 class="font-semibold text-gray-700 mb-4 border-b pb-2">Input Nilai Observasi Mingguan</h3>
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 border-t-4 border-t-blue-500">
+                <h3 class="font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                    <i class="fas fa-pen-to-square text-blue-500"></i> Input Nilai Observasi
+                </h3>
                 
-                <!-- Rubrik Penilaian Collapsible -->
                 <details class="mb-5 group">
                     <summary class="cursor-pointer text-sm font-medium text-blue-700 bg-blue-50 px-4 py-2.5 rounded-lg hover:bg-blue-100 transition-colors flex items-center justify-between border border-blue-100 select-none">
                         <span><i class="fas fa-list-check mr-2"></i>Panduan Matriks Penilaian Dinamis (Klik Buka/Tutup)</span>
@@ -156,44 +174,78 @@
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-gray-200" id="rubricBody">
-                                <!-- Rubrik dimasukkan via JS secara Dinamis berdasarkan Kelas -->
                                 <tr><td colspan="5" class="p-4 text-center">Memuat matriks penilaian...</td></tr>
                             </tbody>
                         </table>
                     </div>
                 </details>
 
-                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 items-end mb-4">
-                    <div>
-                        <!-- Label di update via JS sesuai Indikator matriks -->
-                        <label class="block text-xs font-medium text-gray-600 mb-1" id="labelIndikator0">Indikator 1</label>
-                        <input type="number" id="inputTaktis" min="1" max="4" placeholder="1-4" class="w-full p-2 border border-gray-300 rounded-lg text-sm focus:ring-blue-500 focus:border-blue-500 transition-colors">
+                <div class="mb-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div class="bg-blue-50/50 p-3 rounded-lg border border-blue-100 flex items-center justify-between shadow-sm">
+                        <label class="text-sm font-bold text-blue-800 flex items-center gap-2">
+                            <i class="fas fa-hashtag"></i> Minggu Ke:
+                        </label>
+                        <select id="inputMinggu" class="border-gray-300 rounded-md text-sm font-semibold focus:ring-blue-500 focus:border-blue-500 p-1.5 outline-none bg-white shadow-sm px-4">
+                            <option value="1">Minggu 1</option><option value="2">Minggu 2</option><option value="3">Minggu 3</option><option value="4">Minggu 4</option>
+                        </select>
                     </div>
-                    <div>
-                        <label class="block text-xs font-medium text-gray-600 mb-1" id="labelIndikator1">Indikator 2</label>
-                        <input type="number" id="inputUsaha" min="1" max="4" placeholder="1-4" class="w-full p-2 border border-gray-300 rounded-lg text-sm focus:ring-blue-500 focus:border-blue-500 transition-colors">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-medium text-gray-600 mb-1" id="labelIndikator2">Indikator 3</label>
-                        <input type="number" id="inputFisik" min="1" max="4" placeholder="1-4" class="w-full p-2 border border-gray-300 rounded-lg text-sm focus:ring-blue-500 focus:border-blue-500 transition-colors">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-medium text-gray-600 mb-1" id="labelIndikator3">Indikator 4</label>
-                        <input type="number" id="inputKerjasama" min="1" max="4" placeholder="1-4" class="w-full p-2 border border-gray-300 rounded-lg text-sm focus:ring-blue-500 focus:border-blue-500 transition-colors">
+                    
+                    <div class="bg-purple-50/50 p-3 rounded-lg border border-purple-100 flex items-center justify-between shadow-sm">
+                        <label class="text-sm font-bold text-purple-800 flex items-center gap-2">
+                            <i class="fas fa-clipboard-check"></i> Jenis Penilaian:
+                        </label>
+                        <select id="inputJenisPenilaian" class="border-gray-300 rounded-md text-sm font-semibold focus:ring-purple-500 focus:border-purple-500 p-1.5 outline-none bg-white shadow-sm px-4 text-purple-700">
+                            <option value="Formatif">Formatif</option>
+                            <option value="Sumatif">Sumatif</option>
+                        </select>
                     </div>
                 </div>
 
-                <!-- Qualitative Note -->
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 items-end mb-4">
+                    <div>
+                        <label class="block text-xs font-medium text-gray-600 mb-1" id="labelIndikator0">Taktis</label>
+                        <input type="number" id="inputTaktis" min="1" max="4" placeholder="Skor 1-4" class="w-full p-2 border border-gray-300 rounded-lg text-sm focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-center font-semibold">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-600 mb-1" id="labelIndikator1">Usaha</label>
+                        <input type="number" id="inputUsaha" min="1" max="4" placeholder="Skor 1-4" class="w-full p-2 border border-gray-300 rounded-lg text-sm focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-center font-semibold">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-600 mb-1" id="labelIndikator2">Fisik</label>
+                        <input type="number" id="inputFisik" min="1" max="4" placeholder="Skor 1-4" class="w-full p-2 border border-gray-300 rounded-lg text-sm focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-center font-semibold">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-600 mb-1" id="labelIndikator3">Kerjasama</label>
+                        <input type="number" id="inputKerjasama" min="1" max="4" placeholder="Skor 1-4" class="w-full p-2 border border-gray-300 rounded-lg text-sm focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-center font-semibold">
+                    </div>
+                </div>
+
+                <div class="mb-5 p-4 bg-slate-50 border border-slate-200 rounded-lg flex items-center justify-between" id="realtimePanel">
+                    <div>
+                        <p class="text-xs text-slate-500 font-bold uppercase tracking-wider mb-1"><i class="fas fa-calculator mr-1"></i> Proyeksi Nilai Akhir</p>
+                        <div class="flex items-baseline gap-2">
+                            <span class="text-3xl font-black text-slate-800" id="liveScoreDisplay">0.0</span>
+                            <span class="text-sm font-medium text-slate-500">/ 100</span>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-xs text-slate-500 font-bold uppercase tracking-wider mb-2">Predikat</p>
+                        <span id="livePredicateDisplay" class="px-4 py-1.5 rounded-full text-sm font-bold bg-slate-200 text-slate-600 shadow-sm">
+                            Menunggu Input
+                        </span>
+                    </div>
+                </div>
+
                 <div class="mb-4">
                     <label class="block text-xs font-medium text-gray-600 mb-1">Catatan Kualitatif / Temuan Guru (Opsional)</label>
-                    <textarea id="inputCatatan" rows="2" class="w-full p-2 border border-gray-300 rounded-lg text-sm focus:ring-blue-500 focus:border-blue-500 transition-colors" placeholder="Misal: Siswa mulai berani berkolaborasi..."></textarea>
+                    <textarea id="inputCatatan" rows="2" class="w-full p-2 border border-gray-300 rounded-lg text-sm focus:ring-blue-500 focus:border-blue-500 transition-colors outline-none" placeholder="Misal: Siswa mulai berani berkolaborasi dengan teman..."></textarea>
                 </div>
 
                 <div class="flex flex-col sm:flex-row justify-between items-center gap-4 mt-2">
                     <p class="text-xs text-gray-400 italic bg-gray-50 p-2 rounded w-full sm:w-auto">
-                        <i class="fas fa-info-circle mr-1"></i> Penilaian bersifat <strong>self-referenced</strong> (membandingkan kemajuan individu).
+                        <i class="fas fa-info-circle mr-1"></i> Pembobotan nilai diatur sama rata (Masing-masing 25%).
                     </p>
-                    <button onclick="addScore()" class="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-lg text-sm font-medium transition-colors shadow-md flex items-center justify-center gap-2">
+                    <button id="btnSaveScore" onclick="addScore()" class="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-lg text-sm font-bold transition-all shadow-md flex items-center justify-center gap-2 transform active:scale-95">
                         <i class="fas fa-save"></i> Simpan Observasi
                     </button>
                 </div>
@@ -202,128 +254,216 @@
         </div>
     </main>
 
-    <!-- Toast Notification Container -->
     <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2"></div>
 
     <script>
-        // =========================================================
-        // MASUKKAN LINK URL WEB APP GOOGLE APPS SCRIPT ANDA DI SINI
-        // =========================================================
-        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwbAo5fSn6CbJPPi8H5seGPEed0SkiLfVGlPQntGdQSdAnAd7ruxgg5viEjvz6VCAyaIA/exec";
+        // GANTI DENGAN URL DEPLOYMENT GOOGLE APPS SCRIPT KAMU
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxGOdLAPsAdJRST-xOJmfvi-JwiT3YlZoo8PPHuRgdoFgeTDSj3o54tjESeWAxjo9M1pg/exec";
         
         let studentsData = []; 
         let classInfoData = {};
         let currentStudentId = null;
         let currentClass = "5A"; 
+        let currentTopicIndex = 0; 
         let chartInstance = null;
 
-        // Inisialisasi Aplikasi (Fetch Data)
+        const mockClassInfo = {
+            "5A": [
+                { materi: "Permainan Bola Besar (Basket)", tujuan: "Meningkatkan akurasi passing dada (chest pass).", rubrik: [
+                    { indikator: "Taktis", skor1: "Bingung posisi", skor2: "Mulai paham", skor3: "Terapkan mandiri", skor4: "Modifikasi taktik" },
+                    { indikator: "Usaha", skor1: "Pasif", skor2: "Mencari ruang", skor3: "Aktif", skor4: "Intensitas tinggi" },
+                    { indikator: "Fisik", skor1: "Sering meleset", skor2: "Dasar benar", skor3: "Akurat", skor4: "Sangat presisi" },
+                    { indikator: "Kerja Sama", skor1: "Egois", skor2: "Mengoper terdesak", skor3: "Berbagi peran", skor4: "Pengatur serangan" }
+                ]}
+            ]
+        };
+
+        const mockStudents = [
+            { id: "s1", name: "Budi Santoso", nis: "1001", kelas: "5A", status: "Reguler", color: "bg-blue-100 text-blue-700", scores: { labels: ["Mg 1"], taktis: [2], usaha: [3], fisik: [2], kerjasama: [1] }, attendance: ["Hadir", "Izin"], notes: [] }
+        ];
+
         async function init() {
             try {
-                // Fetch data dari Google Sheets API (Code.gs)
                 const response = await fetch(SCRIPT_URL);
                 const result = await response.json();
                 
                 if (result.status === "success") {
                     studentsData = result.data.students;
-                    classInfoData = result.data.classInfo;
-                    
-                    // Update lencana status UI menjadi Sinkron
-                    const syncBadge = document.getElementById("syncStatus");
-                    syncBadge.className = "text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-bold border border-green-200 shadow-sm flex items-center gap-1 transition-all";
-                    syncBadge.innerHTML = `<i class="fas fa-check-circle"></i> Sinkron`;
-                    showToast("Berhasil Terhubung", "Data tersinkronisasi otomatis dengan Google Sheets.", "success");
+                    let rawClassInfo = result.data.classInfo;
+                    classInfoData = {};
+                    for (let k in rawClassInfo) {
+                        if (Array.isArray(rawClassInfo[k])) classInfoData[k] = rawClassInfo[k];
+                        else classInfoData[k] = [rawClassInfo[k]];
+                    }
+                    setSyncStatus(true);
                 }
             } catch (error) {
-                // Tangani Error Koneksi
-                const syncBadge = document.getElementById("syncStatus");
-                syncBadge.className = "text-[10px] bg-red-100 text-red-700 px-2 py-0.5 rounded-full font-bold border border-red-200 shadow-sm flex items-center gap-1 transition-all";
-                syncBadge.innerHTML = `<i class="fas fa-times-circle"></i> Gagal Sinkron`;
-                showToast("Koneksi Gagal", "Pastikan URL Google Apps Script sudah benar.", "error");
-                console.error("Fetch error:", error);
+                console.warn("Menggunakan Data Mock");
+                studentsData = mockStudents; classInfoData = mockClassInfo;
+                setSyncStatus(false);
             }
 
-            // Setelah fetch selesai, proses UI untuk kelas aktif
+            populateRekapDropdown(); // Populasikan Dropdown Rekap Kelas
             changeClass(currentClass);
-
-            // Fitur Pencarian
+            
             document.getElementById('searchInput').addEventListener('input', (e) => {
                 const term = e.target.value.toLowerCase();
                 const filtered = studentsData.filter(s => s.kelas === currentClass && s.name.toLowerCase().includes(term));
                 renderStudentList(filtered);
             });
+
+            const inputs = ['inputTaktis', 'inputUsaha', 'inputFisik', 'inputKerjasama'];
+            inputs.forEach(id => { document.getElementById(id).addEventListener('input', calculateRealtimeScore); });
         }
 
-        // Fitur Mengganti Kelas via Dropdown
+        function populateRekapDropdown() {
+            const dropdown = document.getElementById('rekapClassDropdown');
+            dropdown.innerHTML = '';
+            for (let cls in classInfoData) {
+                let opt = document.createElement('option');
+                opt.value = cls; opt.text = `Kelas ${cls}`;
+                dropdown.appendChild(opt);
+            }
+            dropdown.value = currentClass;
+        }
+
+        function setSyncStatus(isSuccess) {
+            const syncBadge = document.getElementById("syncStatus");
+            if(isSuccess) {
+                syncBadge.className = "text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-bold border border-green-200 shadow-sm flex items-center gap-1";
+                syncBadge.innerHTML = `<i class="fas fa-check-circle"></i> Tersinkron`;
+            } else {
+                syncBadge.className = "text-[10px] bg-red-100 text-red-700 px-2 py-0.5 rounded-full font-bold border border-red-200 shadow-sm flex items-center gap-1";
+                syncBadge.innerHTML = `<i class="fas fa-exclamation-triangle"></i> Demo`;
+            }
+        }
+
+        function updateAttendanceStats(student) {
+            const att = student.attendance || [];
+            const total = att.length;
+            if(total === 0) {
+                document.getElementById('statHadir').innerText = "0%"; document.getElementById('statIzin').innerText = "0%"; document.getElementById('statAlpa').innerText = "0%";
+                return;
+            }
+            let h = 0, i = 0, a = 0;
+            att.forEach(st => {
+                if(st === 'Hadir') h++; else if(st === 'Izin' || st === 'Sakit') i++; else if(st === 'Alpa') a++;
+            });
+            document.getElementById('statHadir').innerText = Math.round((h/total)*100) + "%";
+            document.getElementById('statIzin').innerText = Math.round((i/total)*100) + "%";
+            document.getElementById('statAlpa').innerText = Math.round((a/total)*100) + "%";
+        }
+
+        function calculateRealtimeScore() {
+            const s1 = parseFloat(document.getElementById('inputTaktis').value) || 0;
+            const s2 = parseFloat(document.getElementById('inputUsaha').value) || 0;
+            const s3 = parseFloat(document.getElementById('inputFisik').value) || 0;
+            const s4 = parseFloat(document.getElementById('inputKerjasama').value) || 0;
+
+            const scoreDisplay = document.getElementById('liveScoreDisplay');
+            const predicateDisplay = document.getElementById('livePredicateDisplay');
+            const panel = document.getElementById('realtimePanel');
+
+            if (s1 > 0 || s2 > 0 || s3 > 0 || s4 > 0) {
+                const totalSkor = s1 + s2 + s3 + s4;
+                let countFilled = 0;
+                if(s1 > 0) countFilled++; if(s2 > 0) countFilled++; if(s3 > 0) countFilled++; if(s4 > 0) countFilled++;
+
+                const maxPossibleScoreForFilled = countFilled * 4;
+                const finalScore = (totalSkor / maxPossibleScoreForFilled) * 100;
+
+                scoreDisplay.classList.remove('fade-in'); void scoreDisplay.offsetWidth; scoreDisplay.classList.add('fade-in');
+                scoreDisplay.innerText = finalScore.toFixed(1);
+
+                if (finalScore >= 86) {
+                    predicateDisplay.className = "px-4 py-1.5 rounded-full text-sm font-bold bg-green-100 text-green-700 shadow-sm"; predicateDisplay.innerHTML = '<i class="fas fa-star mr-1"></i> Sangat Baik'; panel.className = "mb-5 p-4 bg-green-50/50 border border-green-200 rounded-lg flex items-center justify-between transition-colors duration-300";
+                } else if (finalScore >= 76) {
+                    predicateDisplay.className = "px-4 py-1.5 rounded-full text-sm font-bold bg-blue-100 text-blue-700 shadow-sm"; predicateDisplay.innerHTML = '<i class="fas fa-thumbs-up mr-1"></i> Baik'; panel.className = "mb-5 p-4 bg-blue-50/50 border border-blue-200 rounded-lg flex items-center justify-between transition-colors duration-300";
+                } else if (finalScore >= 66) {
+                    predicateDisplay.className = "px-4 py-1.5 rounded-full text-sm font-bold bg-yellow-100 text-yellow-700 shadow-sm"; predicateDisplay.innerHTML = 'Cukup'; panel.className = "mb-5 p-4 bg-yellow-50/50 border border-yellow-200 rounded-lg flex items-center justify-between transition-colors duration-300";
+                } else {
+                    predicateDisplay.className = "px-4 py-1.5 rounded-full text-sm font-bold bg-red-100 text-red-700 shadow-sm"; predicateDisplay.innerHTML = 'Perlu Bimbingan'; panel.className = "mb-5 p-4 bg-red-50/50 border border-red-200 rounded-lg flex items-center justify-between transition-colors duration-300";
+                }
+            } else {
+                scoreDisplay.innerText = "0.0"; predicateDisplay.className = "px-4 py-1.5 rounded-full text-sm font-bold bg-slate-200 text-slate-600 shadow-sm"; predicateDisplay.innerText = "Menunggu Input"; panel.className = "mb-5 p-4 bg-slate-50 border border-slate-200 rounded-lg flex items-center justify-between transition-colors duration-300";
+            }
+        }
+
+        function changeTopic(index) {
+            currentTopicIndex = parseInt(index);
+            updateTopicUI();
+        }
+
+        function updateTopicUI() {
+            const topics = classInfoData[currentClass];
+            if (!topics || topics.length === 0) return;
+            const topicData = topics[currentTopicIndex];
+            if (!topicData) return;
+
+            document.getElementById('detailObjective').innerText = topicData.tujuan || "Tujuan pembelajaran belum ditentukan.";
+            const rubricBody = document.getElementById('rubricBody');
+            rubricBody.innerHTML = '';
+            
+            if (topicData.rubrik && topicData.rubrik.length > 0) {
+                topicData.rubrik.forEach((item, idx) => {
+                    rubricBody.innerHTML += `
+                        <tr class="hover:bg-gray-50 transition-colors">
+                            <td class="p-3 border-r font-medium text-gray-700 bg-gray-50/30">${item.indikator}</td>
+                            <td class="p-3 border-r">${item.skor1}</td>
+                            <td class="p-3 border-r">${item.skor2}</td>
+                            <td class="p-3 border-r">${item.skor3}</td>
+                            <td class="p-3">${item.skor4}</td>
+                        </tr>
+                    `;
+                    if (idx < 4) {
+                        const labelEl = document.getElementById(`labelIndikator${idx}`);
+                        if (labelEl) labelEl.innerText = item.indikator;
+                    }
+                });
+            } else {
+                rubricBody.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-gray-500">Matriks belum diatur di Database untuk materi ini.</td></tr>`;
+            }
+
+            if (currentStudentId) {
+                const student = studentsData.find(s => s.id === currentStudentId);
+                if (student) updateChart(student);
+            }
+        }
+
         function changeClass(className) {
             currentClass = className;
-            document.getElementById('searchInput').value = ''; // Reset pencarian
+            document.getElementById('searchInput').value = ''; 
             
-            // 1. Update Topik, Matriks, dan Label sesuai Kelas
-            updateClassUI(className);
+            const topicSelector = document.getElementById('topicSelector');
+            topicSelector.innerHTML = '';
+            const topics = classInfoData[className] || [];
+            if (topics.length > 0) {
+                topics.forEach((topic, index) => {
+                    const option = document.createElement('option');
+                    option.value = index; option.text = topic.materi;
+                    topicSelector.appendChild(option);
+                });
+                currentTopicIndex = 0; 
+            } else {
+                topicSelector.innerHTML = '<option value="">Tidak ada topik</option>';
+            }
 
-            // 2. Render Siswa
+            updateTopicUI();
+
+            const dropdownRekap = document.getElementById('rekapClassDropdown');
+            if (dropdownRekap) dropdownRekap.value = className;
+
             const filteredStudents = studentsData.filter(s => s.kelas === className);
             document.getElementById('studentCount').innerText = `${filteredStudents.length} Siswa`;
             renderStudentList(filteredStudents);
             
-            // 3. Auto-pilih siswa pertama di kelas tersebut
-            if(filteredStudents.length > 0) {
-                selectStudent(filteredStudents[0].id);
-            } else {
-                document.getElementById('detailName').innerText = "Belum Ada Data Siswa";
-                document.getElementById('detailObjective').innerText = "-";
-                document.getElementById('detailAvatar').innerText = "?";
-                if(chartInstance) chartInstance.destroy(); // Kosongkan grafik
-            }
+            if(filteredStudents.length > 0) selectStudent(filteredStudents[0].id);
         }
 
-        // FUNGSI BARU: Update Topik dan Matriks Berdasarkan Kelas
-        function updateClassUI(className) {
-            const classData = classInfoData[className];
-            const topicSpan = document.getElementById('headerTopic');
-            const rubricBody = document.getElementById('rubricBody');
-
-            if (classData) {
-                // A. Update Topik di Header
-                topicSpan.innerText = `Topik: ${classData.materi}`;
-
-                // B. Update Tabel Matriks Dinamis
-                rubricBody.innerHTML = '';
-                if (classData.rubrik && classData.rubrik.length > 0) {
-                    classData.rubrik.forEach((item, index) => {
-                        rubricBody.innerHTML += `
-                            <tr class="hover:bg-gray-50 transition-colors">
-                                <td class="p-3 border-r font-medium text-gray-700 bg-gray-50/30">${item.indikator}</td>
-                                <td class="p-3 border-r">${item.skor1}</td>
-                                <td class="p-3 border-r">${item.skor2}</td>
-                                <td class="p-3 border-r">${item.skor3}</td>
-                                <td class="p-3">${item.skor4}</td>
-                            </tr>
-                        `;
-                        // C. Update Label Input (Max 4)
-                        if (index < 4) {
-                            document.getElementById(`labelIndikator${index}`).innerText = item.indikator;
-                        }
-                    });
-                } else {
-                    rubricBody.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-gray-500">Matriks belum diatur di Database untuk materi ini.</td></tr>`;
-                }
-            } else {
-                topicSpan.innerText = `Topik: Belum Ditentukan`;
-                rubricBody.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-gray-500">Data tidak ditemukan untuk kelas ${className}</td></tr>`;
-            }
-        }
-
-        // Render Daftar Siswa
         function renderStudentList(data) {
             const container = document.getElementById('studentList');
             container.innerHTML = '';
-            
-            if (data.length === 0) {
-                container.innerHTML = `<div class="p-6 text-center text-gray-400 text-sm"><i class="fas fa-folder-open text-2xl mb-2"></i><br>Kosong</div>`;
-                return;
-            }
+            if (data.length === 0) return;
 
             data.forEach(student => {
                 const isActive = student.id === currentStudentId ? 'bg-blue-50 border-blue-200' : 'hover:bg-gray-50 border-transparent';
@@ -341,47 +481,42 @@
             });
         }
 
-        // Cek Progres
-        function checkProgress(student) {
-            if(!student || !student.scores || student.scores.labels.length < 2) return false;
-            const firstWeekTotal = student.scores.taktis[0] + student.scores.usaha[0] + student.scores.fisik[0] + student.scores.kerjasama[0];
-            const lastIdx = student.scores.labels.length - 1;
-            const lastWeekTotal = student.scores.taktis[lastIdx] + student.scores.usaha[lastIdx] + student.scores.fisik[lastIdx] + student.scores.kerjasama[lastIdx];
-            return (lastWeekTotal - firstWeekTotal) >= 3;
-        }
-
-        // Pilih Siswa
         function selectStudent(id) {
             currentStudentId = id;
             const student = studentsData.find(s => s.id === id);
             if(!student) return;
             
-            // Render list ulang untuk highlight
             const term = document.getElementById('searchInput').value.toLowerCase();
             renderStudentList(studentsData.filter(s => s.kelas === currentClass && s.name.toLowerCase().includes(term)));
 
-            // Update UI Detail
             document.getElementById('detailName').innerText = student.name;
             document.getElementById('detailNis').innerText = `NIS: ${student.nis}`;
             document.getElementById('detailStatus').innerText = student.status;
             document.getElementById('detailStatus').className = `px-2 py-0.5 rounded-full text-xs font-medium ${student.color}`;
-            document.getElementById('detailAvatar').innerText = student.name.charAt(0);
-            document.getElementById('detailObjective').innerText = student.objective;
+            
+            const initials = student.name.split(' ').map(n => n[0]).join('').substring(0,2).toUpperCase();
+            document.getElementById('detailAvatar').innerText = initials;
+            
+            const today = new Date();
+            const yyyy = today.getFullYear(); const mm = String(today.getMonth() + 1).padStart(2, '0'); const dd = String(today.getDate()).padStart(2, '0');
+            document.getElementById('inputTanggal').value = `${yyyy}-${mm}-${dd}`;
+            document.getElementById('inputKehadiran').value = 'Hadir';
 
-            // Update Badge
-            const badge = document.getElementById('detailProgressBadge');
-            if(checkProgress(student)) badge.classList.remove('hidden');
-            else badge.classList.add('hidden');
-
+            updateAttendanceStats(student);
             updateChart(student);
+            
+            const nextWeek = Math.min(student.scores.labels.length + 1, 4); 
+            document.getElementById('inputMinggu').value = nextWeek.toString();
+            document.getElementById('inputJenisPenilaian').value = 'Formatif';
+
+            document.getElementById('inputTaktis').value = ''; document.getElementById('inputUsaha').value = ''; document.getElementById('inputFisik').value = ''; document.getElementById('inputKerjasama').value = ''; document.getElementById('inputCatatan').value = '';
+            calculateRealtimeScore(); 
         }
 
-        // Update Chart Berdasarkan Indikator Dinamis
         function updateChart(student) {
             const ctx = document.getElementById('progressChart').getContext('2d');
             if (chartInstance) chartInstance.destroy();
 
-            // Mengambil nama label dari UI yang sudah update dinamis
             const lbl1 = document.getElementById('labelIndikator0').innerText;
             const lbl2 = document.getElementById('labelIndikator1').innerText;
             const lbl3 = document.getElementById('labelIndikator2').innerText;
@@ -392,63 +527,162 @@
                 data: {
                     labels: student.scores.labels,
                     datasets: [
-                        { label: lbl1, data: student.scores.taktis, borderColor: '#3b82f6', backgroundColor: 'rgba(59, 130, 246, 0.1)', borderWidth: 2, tension: 0.3, fill: false, pointBackgroundColor: '#3b82f6' },
-                        { label: lbl2, data: student.scores.usaha, borderColor: '#f59e0b', backgroundColor: 'rgba(245, 158, 11, 0.1)', borderWidth: 2, tension: 0.3, fill: false, pointBackgroundColor: '#f59e0b' },
-                        { label: lbl3, data: student.scores.fisik, borderColor: '#10b981', backgroundColor: 'rgba(16, 185, 129, 0.1)', borderWidth: 2, tension: 0.3, fill: false, pointBackgroundColor: '#10b981' },
-                        { label: lbl4, data: student.scores.kerjasama, borderColor: '#8b5cf6', backgroundColor: 'rgba(139, 92, 246, 0.1)', borderWidth: 2, tension: 0.3, fill: false, pointBackgroundColor: '#8b5cf6' }
+                        { label: lbl1, data: student.scores.taktis, spanGaps: true, borderColor: '#3b82f6', backgroundColor: 'rgba(59, 130, 246, 0.1)', borderWidth: 2, tension: 0.3, fill: false },
+                        { label: lbl2, data: student.scores.usaha, spanGaps: true, borderColor: '#f59e0b', backgroundColor: 'rgba(245, 158, 11, 0.1)', borderWidth: 2, tension: 0.3, fill: false },
+                        { label: lbl3, data: student.scores.fisik, spanGaps: true, borderColor: '#10b981', backgroundColor: 'rgba(16, 185, 129, 0.1)', borderWidth: 2, tension: 0.3, fill: false },
+                        { label: lbl4, data: student.scores.kerjasama, spanGaps: true, borderColor: '#8b5cf6', backgroundColor: 'rgba(139, 92, 246, 0.1)', borderWidth: 2, tension: 0.3, fill: false }
                     ]
                 },
                 options: {
                     responsive: true, maintainAspectRatio: false,
-                    plugins: { legend: { position: 'bottom', labels: { usePointStyle: true, boxWidth: 6, font: {family: "'Inter', sans-serif", size: 10} } }, tooltip: { mode: 'index', intersect: false } },
-                    scales: { y: { min: 0, max: 4, ticks: { stepSize: 1 } }, x: { grid: { display: false } } },
-                    interaction: { mode: 'nearest', axis: 'x', intersect: false }
+                    plugins: { legend: { position: 'bottom', labels: { usePointStyle: true, boxWidth: 6, font: {size: 10} } } },
+                    scales: { y: { min: 0, max: 4, ticks: { stepSize: 1 } }, x: { grid: { display: false } } }
                 }
             });
         }
 
-        // Simpan Observasi
-        function addScore() {
-            const s1 = parseInt(document.getElementById('inputTaktis').value);
-            const s2 = parseInt(document.getElementById('inputUsaha').value);
-            const s3 = parseInt(document.getElementById('inputFisik').value);
-            const s4 = parseInt(document.getElementById('inputKerjasama').value);
+        async function addAttendance() {
+            const tanggal = document.getElementById('inputTanggal').value;
+            const kehadiran = document.getElementById('inputKehadiran').value;
+            const student = studentsData.find(s => s.id === currentStudentId);
+
+            if (!tanggal) { showToast("Peringatan", "Tanggal tidak boleh kosong.", "error"); return; }
+
+            const payload = { action: "simpanAbsensi", kelas: currentClass, studentId: student.nis, studentName: student.name, tanggal: tanggal, kehadiran: kehadiran };
+
+            const btnSave = document.getElementById('btnSaveAbsensi');
+            const originalBtnText = btnSave.innerHTML;
+            btnSave.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Menyimpan...'; btnSave.disabled = true;
+
+            try {
+                const response = await fetch(SCRIPT_URL, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(payload) });
+                const result = await response.json();
+                if (result.status === "success") {
+                    if (!student.attendance) student.attendance = [];
+                    student.attendance.push(kehadiran); 
+                    updateAttendanceStats(student);     
+                    showToast("Tersimpan!", `Kehadiran ${student.name} tanggal ${tanggal} direkap.`, "success");
+                } else throw new Error(result.message);
+            } catch (error) {
+                console.error(error); showToast("Gagal Disimpan", "Koneksi ke Sheets bermasalah.", "error");
+            } finally {
+                btnSave.innerHTML = originalBtnText; btnSave.disabled = false;
+            }
+        }
+
+        async function addScore() {
+            const s1 = parseInt(document.getElementById('inputTaktis').value); const s2 = parseInt(document.getElementById('inputUsaha').value);
+            const s3 = parseInt(document.getElementById('inputFisik').value); const s4 = parseInt(document.getElementById('inputKerjasama').value);
             const catatan = document.getElementById('inputCatatan').value;
+            const calculatedScore = document.getElementById('liveScoreDisplay').innerText;
+            const mingguValue = document.getElementById('inputMinggu').value;
+            const jenisPenilaianValue = document.getElementById('inputJenisPenilaian').value;
+            const newLabel = `Mg ${mingguValue}`;
+            const predicateHTML = document.getElementById('livePredicateDisplay').innerHTML;
+            const predikat = predicateHTML.replace(/(<([^>]+)>)/gi, "").trim();
 
             if (!s1 || !s2 || !s3 || !s4 || s1 < 1 || s1 > 4 || s2 < 1 || s2 > 4 || s3 < 1 || s3 > 4 || s4 < 1 || s4 > 4) {
-                showToast("Validasi Gagal", "Pastikan semua nilai diisi dengan skala 1 sampai 4.", "error");
-                return;
+                showToast("Validasi Gagal", "Semua 4 indikator harus diisi angka 1 sampai 4.", "error"); return;
             }
 
             const student = studentsData.find(s => s.id === currentStudentId);
-            const newLabel = `Mg ${student.scores.labels.length + 1}`;
+            const topics = classInfoData[currentClass];
+            const currentTopicName = topics && topics[currentTopicIndex] ? topics[currentTopicIndex].materi : "Materi Umum";
             
-            student.scores.labels.push(newLabel);
-            student.scores.taktis.push(s1);
-            student.scores.usaha.push(s2);
-            student.scores.fisik.push(s3);
-            student.scores.kerjasama.push(s4);
-            
-            if (catatan.trim() !== "") student.notes.push(`${newLabel}: ${catatan}`);
+            const payload = {
+                action: "simpanNilai", kelas: currentClass, materi: currentTopicName, studentId: student.nis, studentName: student.name,
+                minggu: newLabel, jenisPenilaian: jenisPenilaianValue,
+                skor1: s1, skor2: s2, skor3: s3, skor4: s4, nilaiAkhir: calculatedScore, predikat: predikat, catatan: catatan
+            };
 
-            // Reset Form
-            document.getElementById('inputTaktis').value = ''; document.getElementById('inputUsaha').value = '';
-            document.getElementById('inputFisik').value = ''; document.getElementById('inputKerjasama').value = '';
-            document.getElementById('inputCatatan').value = '';
+            const btnSave = document.getElementById('btnSaveScore'); const originalBtnText = btnSave.innerHTML;
+            btnSave.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Menyimpan...'; btnSave.disabled = true;
 
-            selectStudent(currentStudentId); 
-            if (checkProgress(student)) showToast("Luar Biasa!", `Peningkatan signifikan pada profil ${student.name}.`, "success");
-            else showToast("Tersimpan", "Data observasi mingguan berhasil ditambahkan.", "success");
+            try {
+                const response = await fetch(SCRIPT_URL, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(payload) });
+                const result = await response.json();
+                if (result.status === "success") {
+                    const existingIndex = student.scores.labels.indexOf(newLabel);
+                    
+                    if (existingIndex !== -1) {
+                        student.scores.taktis[existingIndex] = s1;
+                        student.scores.usaha[existingIndex] = s2;
+                        student.scores.fisik[existingIndex] = s3;
+                        student.scores.kerjasama[existingIndex] = s4;
+                        showToast("Diperbarui!", `Nilai ${newLabel} sukses di-update di Kelas & Master Nilai.`, "success");
+                    } else {
+                        student.scores.labels.push(newLabel);
+                        student.scores.taktis.push(s1);
+                        student.scores.usaha.push(s2);
+                        student.scores.fisik.push(s3);
+                        student.scores.kerjasama.push(s4);
+                        showToast("Tersimpan!", `Nilai ${newLabel} sukses direkap ke Kelas & Master Nilai.`, "success");
+                    }
+                    
+                    if (catatan.trim() !== "") student.notes.push(`${newLabel}: ${catatan}`);
+                    document.getElementById('inputTaktis').value = ''; document.getElementById('inputUsaha').value = ''; document.getElementById('inputFisik').value = ''; document.getElementById('inputKerjasama').value = ''; document.getElementById('inputCatatan').value = '';
+                    calculateRealtimeScore(); selectStudent(currentStudentId); 
+                } else throw new Error(result.message);
+            } catch (error) { showToast("Gagal Tersimpan", "Koneksi ke Sheets bermasalah.", "error");
+            } finally { btnSave.innerHTML = originalBtnText; btnSave.disabled = false; }
         }
 
-        // Kirim Laporan
-        function sendReport() {
+        async function cetakRapor() {
             const student = studentsData.find(s => s.id === currentStudentId);
-            showToast("Memproses Analisis...", `Menyusun laporan untuk ${student.name}...`, "info");
-            setTimeout(() => { showToast("Terkirim", `Laporan terkirim ke WhatsApp Orang Tua!`, "success"); }, 2000);
+            if (!student) return;
+            const payload = { action: "cetakRapor", kelas: currentClass, studentId: student.nis, studentName: student.name };
+            const btn = document.getElementById('btnCetakRapor'); const oriText = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Memproses...'; btn.disabled = true;
+            try {
+                const response = await fetch(SCRIPT_URL, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(payload) });
+                const result = await response.json();
+                if (result.status === "success") { 
+                    showToast("Rapor Siap!", "Membuka tab Rapor Dinamis...", "success"); 
+                    setTimeout(() => { window.open(result.sheetUrl, "_blank"); }, 1000);
+                } else throw new Error(result.message);
+            } catch (error) { 
+                showToast("Gagal Cetak", error.message || "Gagal menghubungi Google Sheets.", "error"); 
+                console.error(error);
+            } finally { btn.innerHTML = oriText; btn.disabled = false; }
         }
 
-        // Sistem Toast
+        async function cetakRaporKelas() {
+            const selectedClass = document.getElementById('rekapClassDropdown').value;
+            if (!selectedClass) {
+                showToast("Peringatan", "Pilih kelas terlebih dahulu.", "error");
+                return;
+            }
+
+            const payload = {
+                action: "cetakRaporKelas",
+                kelas: selectedClass
+            };
+
+            const btn = document.getElementById('btnCetakRaporKelas');
+            const oriText = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Memproses...';
+            btn.disabled = true;
+
+            try {
+                const response = await fetch(SCRIPT_URL, {
+                    method: "POST",
+                    headers: { "Content-Type": "text/plain;charset=utf-8" },
+                    body: JSON.stringify(payload)
+                });
+                const result = await response.json();
+                if (result.status === "success") {
+                    showToast("Rekap Kelas Siap!", `Membuka tab Rekap Rapor Kelas ${selectedClass}...`, "success");
+                    setTimeout(() => { window.open(result.sheetUrl, "_blank"); }, 1000);
+                } else throw new Error(result.message); // INI AKAN MENAMPILKAN ERROR ASLI DARI SERVER
+            } catch (error) {
+                showToast("Gagal Cetak", error.message || "Gagal menghubungi Google Sheets.", "error");
+                console.error(error);
+            } finally {
+                btn.innerHTML = oriText;
+                btn.disabled = false;
+            }
+        }
+
         function showToast(title, message, type = 'info') {
             const container = document.getElementById('toastContainer');
             const toast = document.createElement('div');
@@ -458,7 +692,6 @@
 
             toast.className = `bg-white px-4 py-3 rounded-xl shadow-xl border-l-4 ${border} flex items-start gap-3 w-80 md:w-96 toast-enter`;
             toast.innerHTML = `<div class="${bgIcon} w-8 h-8 rounded-full flex items-center justify-center shrink-0 mt-0.5"><i class="fas ${icon} text-sm"></i></div><div class="flex-1"><h4 class="text-sm font-bold text-gray-800">${title}</h4><p class="text-xs text-gray-600 mt-1 leading-relaxed">${message}</p></div><button onclick="this.parentElement.remove()" class="text-gray-400 hover:text-gray-700 transition"><i class="fas fa-times"></i></button>`;
-            
             container.appendChild(toast);
             setTimeout(() => { if(toast.parentElement) { toast.classList.replace('toast-enter', 'toast-exit'); setTimeout(() => toast.remove(), 300); } }, 5000);
         }
