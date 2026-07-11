@@ -480,7 +480,7 @@
 
     <script>
         // GANTI DENGAN URL DEPLOYMENT GOOGLE APPS SCRIPT KAMU NANTINYA
-        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwSY9cYsm-Z18Tx87PFRw4UqdnVLWkT1t-7aXC8-pevrqm_POtmIRq7tW530aKbgHM/exec";
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycby02c93Mow9PtrMqgiImgnuazwGOZNGPzUiy7BOixXYjZiCHp5V4YP2rVRt8suH78-IBw/exec";
         
         let studentsData = []; 
         let classInfoData = {};
@@ -532,7 +532,7 @@
                 customDashboardLogo.classList.remove("hidden");
                 document.getElementById("dashboardLogoContainer").classList.add("p-0");
 
-                document.getElementById("defaultModalLogo").classList.add("hidden");
+                document.getElementById("defaultModalLogo").classList.remove("hidden");
                 const customModalLogo = document.getElementById("customModalLogo");
                 customModalLogo.src = savedLogo;
                 customModalLogo.classList.remove("hidden");
@@ -585,7 +585,7 @@
             loginBtn.disabled = true; loginBtn.innerHTML = `<i class="fas fa-spinner fa-spin mr-1"></i> Memvalidasi...`;
 
             setTimeout(() => {
-                if (username === "admin" && password === "123") {
+                if (username === "Admin" && password === "123") {
                     document.getElementById('loginPage').classList.add('hidden');
                     document.getElementById('mainHeader').classList.remove('hidden');
                     document.getElementById('mainContent').classList.remove('hidden');
@@ -996,25 +996,113 @@
             calculateRealtimeScore(); 
         }
 
+        // FUNGSI GRAFIK YANG SUDAH DI-UPDATE MENJADI RADAR CHART
         function updateChart(student) {
             const ctx = document.getElementById('progressChart').getContext('2d');
             if (chartInstance) chartInstance.destroy();
-            const lbl1 = document.getElementById('labelIndikator0').innerText; const lbl2 = document.getElementById('labelIndikator1').innerText; const lbl3 = document.getElementById('labelIndikator2').innerText; const lbl4 = document.getElementById('labelIndikator3').innerText;
+            
+            // Mengambil nama indikator dinamis dari UI
+            const lbl1 = document.getElementById('labelIndikator0').innerText;
+            const lbl2 = document.getElementById('labelIndikator1').innerText;
+            const lbl3 = document.getElementById('labelIndikator2').innerText;
+            const lbl4 = document.getElementById('labelIndikator3').innerText;
+
+            const totalMinggu = student.scores.labels.length;
+            
+            // Data Minggu Pertama (Baseline)
+            const dataAwal = [
+                student.scores.taktis[0] || 0,
+                student.scores.usaha[0] || 0,
+                student.scores.fisik[0] || 0,
+                student.scores.kerjasama[0] || 0
+            ];
+
+            // Data Minggu Terbaru (Progress)
+            const labelTerbaru = totalMinggu > 0 ? student.scores.labels[totalMinggu - 1] : "Belum Ada Data";
+            const dataTerbaru = [
+                student.scores.taktis[totalMinggu - 1] || 0,
+                student.scores.usaha[totalMinggu - 1] || 0,
+                student.scores.fisik[totalMinggu - 1] || 0,
+                student.scores.kerjasama[totalMinggu - 1] || 0
+            ];
 
             chartInstance = new Chart(ctx, {
-                type: 'line',
-                data: { labels: student.scores.labels, datasets: [ { label: lbl1, data: student.scores.taktis, spanGaps: true, borderColor: '#3b82f6', backgroundColor: 'rgba(59, 130, 246, 0.1)', borderWidth: 2, tension: 0.3, fill: false }, { label: lbl2, data: student.scores.usaha, spanGaps: true, borderColor: '#f59e0b', backgroundColor: 'rgba(245, 158, 11, 0.1)', borderWidth: 2, tension: 0.3, fill: false }, { label: lbl3, data: student.scores.fisik, spanGaps: true, borderColor: '#10b981', backgroundColor: 'rgba(16, 185, 129, 0.1)', borderWidth: 2, tension: 0.3, fill: false }, { label: lbl4, data: student.scores.kerjasama, spanGaps: true, borderColor: '#8b5cf6', backgroundColor: 'rgba(139, 92, 246, 0.1)', borderWidth: 2, tension: 0.3, fill: false } ] },
-                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { usePointStyle: true, boxWidth: 6, font: {size: 10} } } }, scales: { y: { min: 0, max: 4, ticks: { stepSize: 1 } }, x: { grid: { display: false } } } }
+                type: 'radar',
+                data: {
+                    labels: [lbl1, lbl2, lbl3, lbl4],
+                    datasets: [
+                        {
+                            label: 'Kondisi Awal (Mg 1)',
+                            data: dataAwal,
+                            borderColor: 'rgba(148, 163, 184, 0.8)',
+                            backgroundColor: 'rgba(148, 163, 184, 0.1)',
+                            borderWidth: 2,
+                            pointBackgroundColor: '#94a3b8'
+                        },
+                        {
+                            label: `Perkembangan Terbaru (${labelTerbaru})`,
+                            data: dataTerbaru,
+                            borderColor: '#3b82f6',
+                            backgroundColor: 'rgba(59, 130, 246, 0.25)',
+                            borderWidth: 3,
+                            pointBackgroundColor: '#1d4ed8',
+                            pointRadius: 4
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: { usePointStyle: true, boxWidth: 8, font: { family: 'Fredoka', size: 11 } }
+                        }
+                    },
+                    scales: {
+                        r: {
+                            angleLines: { display: true, color: 'rgba(0,0,0,0.05)' },
+                            suggestedMin: 0,
+                            suggestedMax: 4,
+                            ticks: {
+                                stepSize: 1,
+                                backdropColor: 'transparent',
+                                font: { size: 10 }
+                            },
+                            pointLabels: {
+                                font: { family: 'Fredoka', size: 12, weight: 'bold' },
+                                color: '#374151'
+                            }
+                        }
+                    }
+                }
             });
         }
 
-        async function addAttendance() {
-            const tanggal = document.getElementById('inputTanggal').value; const kehadiran = document.getElementById('inputKehadiran').value;
+      async function addAttendance() {
+            const tanggal = document.getElementById('inputTanggal').value; 
+            const kehadiran = document.getElementById('inputKehadiran').value;
             const student = studentsData.find(s => s.id === currentStudentId);
+            
             if (!tanggal) { showToast("Peringatan", "Tanggal tidak boleh kosong.", "error"); return; }
-            const payload = { action: "simpanAbsensi", kelas: currentClass, studentId: student.nis, studentName: student.name, tanggal: tanggal, kehadiran: kehadiran };
-            const btnSave = document.getElementById('btnSaveAbsensi'); const originalBtnText = btnSave.innerHTML;
-            btnSave.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Menyimpan...'; btnSave.disabled = true;
+            
+            // [UPDATE] Tambahan ID Kelompok (Kelas + Tanggal) biar di Spreadsheet gampang di-sort/group
+            const groupId = `ABSEN_${currentClass}_${tanggal.replace(/-/g, '')}`;
+
+            const payload = { 
+                action: "simpanAbsensi", 
+                kelas: currentClass, 
+                studentId: student.nis, 
+                studentName: student.name, 
+                tanggal: tanggal, 
+                kehadiran: kehadiran,
+                groupId: groupId // Parameter baru
+            };
+            
+            const btnSave = document.getElementById('btnSaveAbsensi'); 
+            const originalBtnText = btnSave.innerHTML;
+            btnSave.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Menyimpan...'; 
+            btnSave.disabled = true;
 
             try {
                 const response = await fetch(SCRIPT_URL, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(payload) });
@@ -1058,15 +1146,21 @@
                 if(document.getElementById('modPendamping').checked) modifikasiList.push("Pendampingan Khusus");
             }
             const modifikasiString = modifikasiList.length > 0 ? modifikasiList.join(", ") : "Tidak Ada";
-
             const isNowRemedial = calculatedScore < 66;
+
+            // [UPDATE] Ambil tanggal dari form input absensi untuk mengelompokkan nilai di hari yang sama
+            const tanggalPenilaian = document.getElementById('inputTanggal').value || new Date().toISOString().split('T')[0];
+            const groupId = `NILAI_${currentClass}_${tanggalPenilaian.replace(/-/g, '')}`;
 
             const payload = {
                 action: "simpanNilai", kelas: currentClass, materi: currentTopicName, studentId: student.nis, studentName: student.name,
                 minggu: newLabel, jenisPenilaian: jenisPenilaianValue,
                 skor1: s1, skor2: s2, skor3: s3, skor4: s4, nilaiAkhir: calculatedScore.toString(), predikat: predikat, catatan: catatan,
                 remedial: isNowRemedial,
-                modifikasiPPI: modifikasiString 
+                modifikasiPPI: modifikasiString,
+                // [UPDATE] Tambahan parameter biar datanya rapi dan menyatu di Sheet
+                tanggal: tanggalPenilaian,
+                groupId: groupId 
             };
 
             const btnSave = document.getElementById('btnSaveScore'); const originalBtnText = btnSave.innerHTML;
@@ -1074,7 +1168,7 @@
 
             const finishSave = (isError) => {
                 const existingIndex = student.scores.labels.indexOf(newLabel);
-                if (existingIndex !== -1) { student.scores.taktis[existingIndex] = s1; student.scores.usaha[existingIndex] = s2; student.scores. fisik[existingIndex] = s3; student.scores.kerjasama[existingIndex] = s4; } 
+                if (existingIndex !== -1) { student.scores.taktis[existingIndex] = s1; student.scores.usaha[existingIndex] = s2; student.scores.fisik[existingIndex] = s3; student.scores.kerjasama[existingIndex] = s4; } 
                 else { student.scores.labels.push(newLabel); student.scores.taktis.push(s1); student.scores.usaha.push(s2); student.scores.fisik.push(s3); student.scores.kerjasama.push(s4); }
                 student.remedial = isNowRemedial;
                 
@@ -1101,7 +1195,7 @@
         }
 
         // =========================================================================
-        // UPDATE FITUR: CETAK RAPOR / PDF OTOMATIS (POPUP PILIHAN 1, 2, 3)
+        // UPDATE FITUR: CETAK RAPOR / PDF OTOMATIS (DENGAN TTD & KOP RESMI)
         // =========================================================================
         async function cetakRaporKelas() {
             const selectedClass = document.getElementById('rekapClassDropdown').value;
@@ -1126,11 +1220,22 @@
             const btn = document.getElementById('btnCetakRaporKelas'); const oriText = btn.innerHTML;
             btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Memproses...'; btn.disabled = true;
             
+            // PAYLOAD UPDATE: Menambahkan metadata sekolah untuk kebutuhan cetak PDF
             const payload = { 
                 action: "cetakLaporanSemester", 
                 actionType: actionType, 
                 kelas: selectedClass, 
-                materi: currentTopicName 
+                materi: currentTopicName,
+                metaDataSekolah: {
+                    namaSekolah: "SDN BINTARO 04 PAGI",
+                    alamat: "Jl. Rawapapan RT. 005/06 No. 1 Kel. Bintaro Pesanggrahan Jakarta Selatan 12330",
+                    telp: "021-7376262",
+                    email: "sdnbintaro04@gmail.com",
+                    kepsekNama: "Yulia Suci Rejeki, M. Pd",
+                    kepsekNip: "197507072016062000",
+                    guruNama: "Alie Murtadho",
+                    guruNip: "199403052019031000"
+                }
             };
 
             try {
@@ -1143,13 +1248,11 @@
                 const result = await response.json();
                 
                 if (result.status === "success") { 
-                    // Tombol cadangan diletakkan di dalam Toast (jika Pop-Up terblokir)
                     const linkUrl = result.downloadUrl || result.sheetUrl;
-                    const fallbackBtn = `<span class="block mt-2"><a href="${linkUrl}" target="_blank" class="bg-teal-600 text-white px-3 py-1.5 rounded-md text-[11px] font-bold shadow-sm hover:bg-teal-700 transition inline-flex items-center gap-1"><i class="fas fa-external-link-alt"></i> Buka/Download File PDF</a></span>`;
+                    const fallbackBtn = `<span class="block mt-2"><a href="${linkUrl}" target="_blank" class="bg-teal-600 text-white px-3 py-1.5 rounded-md text-[11px] font-bold shadow-sm hover:bg-teal-700 transition inline-flex items-center gap-1"><i class="fas fa-external-link-alt"></i> Buka/Download File Laporan</a></span>`;
                     
                     showToast("PDF Berhasil Dibuat!", `File otomatis diunduh. Jika tidak muncul, klik tombol di bawah ini: ${fallbackBtn}`, "success"); 
                     
-                    // Teknik klik link transparan yang lolos pop-up blocker
                     setTimeout(() => {
                         const autoLink = document.createElement('a');
                         autoLink.href = linkUrl;
