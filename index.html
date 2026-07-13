@@ -8,6 +8,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
     <style>
         body { font-family: 'Fredoka', sans-serif; background-color: #f3f4f6; }
         .toast-enter { animation: slideIn 0.3s forwards; }
@@ -47,7 +48,6 @@
             100% { transform: translateY(20px) scale(1.05); }
         }
         
-        /* Sporty diagonal stripes background pattern */
         .sports-pattern {
             background-image: linear-gradient(45deg, rgba(255, 255, 255, 0.03) 25%, transparent 25%, transparent 50%, rgba(255, 255, 255, 0.03) 50%, rgba(255, 255, 255, 0.03) 75%, transparent 75%, transparent);
             background-size: 40px 40px;
@@ -63,15 +63,11 @@
         <div id="orb2" class="glowing-orb orb-2"></div>
         <div id="orb3" class="glowing-orb orb-3"></div>
         
-        <!-- Login Card dengan Efek Glassmorphism -->
         <div class="bg-white/90 backdrop-blur-xl p-8 rounded-3xl shadow-2xl w-full max-w-md border border-white/30 relative z-10 transform transition-all duration-300">
             <div class="text-center mb-8">
-                <!-- Icon Badge / Logo Sekolah Custom -->
                 <div class="mx-auto mb-4 relative flex justify-center">
                     <div id="loginLogoContainer" class="bg-blue-600 text-white w-16 h-16 rounded-2xl flex items-center justify-center shadow-lg rotate-3 hover:rotate-0 transition-transform duration-300 overflow-hidden">
-                        <!-- Icon bawaan -->
                         <i id="defaultLoginLogo" class="fas fa-running text-2xl animate-pulse"></i>
-                        <!-- Preview gambar logo custom -->
                         <img id="customLoginLogo" src="" class="hidden w-full h-full object-cover" alt="Logo Sekolah">
                     </div>
                 </div>
@@ -116,7 +112,6 @@
             </div>
         </div>
 
-        <!-- Teks Kepemilikan Halaman Login -->
         <div class="absolute bottom-4 right-6 text-[10px] text-white/70 font-medium tracking-wider z-20 pointer-events-none">
             &copy; 2026 Hak Cipta EduTrack - Alie Murtadho
         </div>
@@ -228,9 +223,9 @@
         
         <div class="w-full md:w-1/3 bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col h-[450px] md:h-full">
             <div class="p-4 border-b border-gray-200 flex justify-between items-center bg-gray-50 rounded-t-xl">
+                <!-- DROPDOWN KELAS OTOMATIS (Dikosongkan dlu, diisi otomatis oleh JS) -->
                 <select id="classSelector" class="font-semibold text-gray-700 bg-transparent border-none focus:ring-0 cursor-pointer text-lg p-0 outline-none hover:text-blue-600 transition-colors" onchange="changeClass(this.value)">
-                    <option value="1A">Kelas 1A</option>
-                    <option value="5A" selected>Kelas 5A</option>
+                    <option value="">Memuat Data Kelas...</option>
                 </select>
                 <span class="bg-blue-100 text-blue-700 text-xs px-2 py-1 rounded-full font-medium" id="studentCount">0 Siswa</span>
             </div>
@@ -471,7 +466,6 @@
         </div>
     </main>
 
-    <!-- Teks Kepemilikan Halaman Dashboard Utama -->
     <div id="dashboardCopyright" class="hidden fixed bottom-4 right-6 text-[10px] text-gray-500 font-medium tracking-wider z-40 pointer-events-none bg-white/60 backdrop-blur px-2 py-1 rounded-lg border border-gray-100 shadow-sm">
         &copy; 2026 Hak Cipta EduTrack - TukangOlahraga
     </div>
@@ -485,7 +479,7 @@
         let studentsData = []; 
         let classInfoData = {};
         let currentStudentId = null;
-        let currentClass = "5A"; 
+        let currentClass = ""; 
         let currentTopicIndex = 0; 
         let chartInstance = null;
         let currentFilter = 'all';
@@ -589,7 +583,7 @@
                     document.getElementById('loginPage').classList.add('hidden');
                     document.getElementById('mainHeader').classList.remove('hidden');
                     document.getElementById('mainContent').classList.remove('hidden');
-                    document.getElementById('dashboardCopyright').classList.remove('hidden'); // Menampilkan Watermark
+                    document.getElementById('dashboardCopyright').classList.remove('hidden'); 
                     document.body.classList.remove('overflow-hidden');
                     showToast("Login Berhasil", "Selamat Datang di Dashboard EduTrack PJOK!", "success");
                     
@@ -607,7 +601,7 @@
         function handleLogout() {
             document.getElementById('usernameInput').value = ''; document.getElementById('passwordInput').value = '';
             document.getElementById('mainHeader').classList.add('hidden'); document.getElementById('mainContent').classList.add('hidden');
-            document.getElementById('dashboardCopyright').classList.add('hidden'); // Menyembunyikan Watermark
+            document.getElementById('dashboardCopyright').classList.add('hidden'); 
             document.getElementById('loginPage').classList.remove('hidden'); document.body.classList.add('overflow-hidden');
             
             const loginBtn = document.getElementById('loginBtn');
@@ -687,10 +681,17 @@
                 setSyncStatus(false);
             }
 
+            // [UPDATE] MENGISI DROPDOWN KELAS OTOMATIS BERDASARKAN DATA SPREADSHEET
+            populateMainClassSelector();
+
             studentsData.forEach(s => { if (s.remedial === undefined) s.remedial = checkRemedialStatus(s); });
 
             populateRekapDropdown(); 
-            changeClass(currentClass);
+            
+            // Merender siswa secara otomatis berdasarkan kelas yang dipilih (Kelas pertama yang ada di database)
+            if (currentClass) {
+                changeClass(currentClass);
+            }
             
             document.getElementById('searchInput').addEventListener('input', applyFilters);
 
@@ -700,7 +701,47 @@
             checkPendingData();
         }
 
-        // --- SISTEM INDIKATOR & STATUS REMEDIAL OTOMATIS --- //
+        function populateMainClassSelector() {
+            const classSelector = document.getElementById('classSelector');
+            classSelector.innerHTML = ''; // Hapus option hardcoded bawaan
+            
+            // Ekstrak nama kelas yang unik dari data siswa yang diunduh
+            const uniqueClasses = [...new Set(studentsData.map(s => s.kelas))].sort();
+            
+            if (uniqueClasses.length > 0) {
+                uniqueClasses.forEach(cls => {
+                    const option = document.createElement('option');
+                    option.value = cls;
+                    option.text = `Kelas ${cls}`;
+                    classSelector.appendChild(option);
+                });
+                // Set kelas pertama sebagai kelas aktif saat pertama dimuat
+                currentClass = uniqueClasses[0];
+            } else {
+                const option = document.createElement('option');
+                option.value = "";
+                option.text = "Tidak Ada Data Kelas";
+                classSelector.appendChild(option);
+            }
+        }
+
+        function populateRekapDropdown() {
+            const dropdown = document.getElementById('rekapClassDropdown'); 
+            dropdown.innerHTML = '';
+            
+            // Sama dengan main class selector, ambil kelas dari data murid
+            const uniqueClasses = [...new Set(studentsData.map(s => s.kelas))].sort();
+            
+            uniqueClasses.forEach(cls => {
+                let opt = document.createElement('option'); 
+                opt.value = cls; 
+                opt.text = `Kelas ${cls}`; 
+                dropdown.appendChild(opt);
+            });
+            
+            dropdown.value = currentClass;
+        }
+
         function checkRemedialStatus(student) {
             if (!student.scores || !student.scores.taktis || student.scores.taktis.length === 0) return false;
             const lastIdx = student.scores.taktis.length - 1;
@@ -782,13 +823,6 @@
 
             checkPendingData(); btnSync.innerHTML = oriText; btnSync.disabled = false;
         }
-        // ----------------------------- //
-
-        function populateRekapDropdown() {
-            const dropdown = document.getElementById('rekapClassDropdown'); dropdown.innerHTML = '';
-            for (let cls in classInfoData) { let opt = document.createElement('option'); opt.value = cls; opt.text = `Kelas ${cls}`; dropdown.appendChild(opt); }
-            dropdown.value = currentClass;
-        }
 
         function setSyncStatus(isSuccess) {
             const syncBadge = document.getElementById("syncStatus");
@@ -828,7 +862,6 @@
 
         function changeTopic(index) { currentTopicIndex = parseInt(index); updateTopicUI(); }
 
-        // --- INTI PERUBAHAN: MENGUBAH UI MATRIKS BERDASARKAN STATUS INKLUSI SISWA AKTIF --- //
         function updateTopicUI() {
             const topics = classInfoData[currentClass];
             if (!topics || topics.length === 0) return;
@@ -927,6 +960,7 @@
             currentFilter = 'all'; const filters = ['all', 'remedial', 'tuntas'];
             filters.forEach(f => { const btn = document.getElementById(`filterBtn-${f}`); if (f === 'all') { btn.className = 'flex-1 text-[11px] font-bold py-1 px-2 rounded-md transition bg-blue-600 text-white shadow-sm'; } else { btn.className = f === 'remedial' ? 'flex-1 text-[11px] font-bold py-1 px-2 rounded-md transition bg-gray-100 text-red-600 hover:bg-red-50 flex items-center justify-center gap-1' : 'flex-1 text-[11px] font-bold py-1 px-2 rounded-md transition bg-gray-100 text-green-600 hover:bg-green-50 flex items-center justify-center gap-1'; } });
 
+            // Render ulang daftar murid dengan fungsi click bawaannya
             renderStudentList(filteredStudents);
             if(filteredStudents.length > 0) selectStudent(filteredStudents[0].id);
         }
@@ -940,6 +974,7 @@
                 const rBadge = student.remedial ? `<span class="flex h-2 w-2 relative"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span><span class="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span></span>` : `<span class="h-2 w-2 rounded-full bg-green-500"></span>`;
                 const el = document.createElement('div');
                 el.className = `p-3 rounded-lg border cursor-pointer transition-colors flex flex-col gap-1 shadow-sm ${isActive}`;
+                // PERHATIKAN DI SINI: Ketika kotak nama dibuat, kita beri fungsi onclick() otomatis memanggil selectStudent
                 el.onclick = () => selectStudent(student.id);
                 el.innerHTML = `
                     <div class="flex items-center justify-between">
@@ -996,12 +1031,10 @@
             calculateRealtimeScore(); 
         }
 
-        // FUNGSI GRAFIK YANG SUDAH DI-UPDATE MENJADI RADAR CHART
         function updateChart(student) {
             const ctx = document.getElementById('progressChart').getContext('2d');
             if (chartInstance) chartInstance.destroy();
             
-            // Mengambil nama indikator dinamis dari UI
             const lbl1 = document.getElementById('labelIndikator0').innerText;
             const lbl2 = document.getElementById('labelIndikator1').innerText;
             const lbl3 = document.getElementById('labelIndikator2').innerText;
@@ -1009,7 +1042,6 @@
 
             const totalMinggu = student.scores.labels.length;
             
-            // Data Minggu Pertama (Baseline)
             const dataAwal = [
                 student.scores.taktis[0] || 0,
                 student.scores.usaha[0] || 0,
@@ -1017,7 +1049,6 @@
                 student.scores.kerjasama[0] || 0
             ];
 
-            // Data Minggu Terbaru (Progress)
             const labelTerbaru = totalMinggu > 0 ? student.scores.labels[totalMinggu - 1] : "Belum Ada Data";
             const dataTerbaru = [
                 student.scores.taktis[totalMinggu - 1] || 0,
@@ -1086,7 +1117,6 @@
             
             if (!tanggal) { showToast("Peringatan", "Tanggal tidak boleh kosong.", "error"); return; }
             
-            // [UPDATE] Tambahan ID Kelompok (Kelas + Tanggal) biar di Spreadsheet gampang di-sort/group
             const groupId = `ABSEN_${currentClass}_${tanggal.replace(/-/g, '')}`;
 
             const payload = { 
@@ -1096,7 +1126,7 @@
                 studentName: student.name, 
                 tanggal: tanggal, 
                 kehadiran: kehadiran,
-                groupId: groupId // Parameter baru
+                groupId: groupId 
             };
             
             const btnSave = document.getElementById('btnSaveAbsensi'); 
@@ -1148,7 +1178,6 @@
             const modifikasiString = modifikasiList.length > 0 ? modifikasiList.join(", ") : "Tidak Ada";
             const isNowRemedial = calculatedScore < 66;
 
-            // [UPDATE] Ambil tanggal dari form input absensi untuk mengelompokkan nilai di hari yang sama
             const tanggalPenilaian = document.getElementById('inputTanggal').value || new Date().toISOString().split('T')[0];
             const groupId = `NILAI_${currentClass}_${tanggalPenilaian.replace(/-/g, '')}`;
 
@@ -1158,7 +1187,6 @@
                 skor1: s1, skor2: s2, skor3: s3, skor4: s4, nilaiAkhir: calculatedScore.toString(), predikat: predikat, catatan: catatan,
                 remedial: isNowRemedial,
                 modifikasiPPI: modifikasiString,
-                // [UPDATE] Tambahan parameter biar datanya rapi dan menyatu di Sheet
                 tanggal: tanggalPenilaian,
                 groupId: groupId 
             };
@@ -1194,9 +1222,6 @@
             } catch (error) { saveOfflineData('score', payload); finishSave(true); } finally { btnSave.innerHTML = originalBtnText; btnSave.disabled = false; }
         }
 
-        // =========================================================================
-        // UPDATE FITUR: CETAK RAPOR / PDF OTOMATIS (DENGAN TTD & KOP RESMI)
-        // =========================================================================
         async function cetakRaporKelas() {
             const selectedClass = document.getElementById('rekapClassDropdown').value;
             if (!selectedClass) { showToast("Peringatan", "Pilih kelas terlebih dahulu.", "error"); return; }
@@ -1220,7 +1245,6 @@
             const btn = document.getElementById('btnCetakRaporKelas'); const oriText = btn.innerHTML;
             btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Memproses...'; btn.disabled = true;
             
-            // PAYLOAD UPDATE: Menambahkan metadata sekolah untuk kebutuhan cetak PDF
             const payload = { 
                 action: "cetakLaporanSemester", 
                 actionType: actionType, 
@@ -1273,7 +1297,6 @@
             showToast("Info", "Fitur Rapor Individu sedang dikembangkan.", "info");
         }
 
-        // Durasi Toast diperpanjang menjadi 8 detik agar pengguna sempat menekan tombol download manual
         function showToast(title, message, type = 'info') {
             const container = document.getElementById('toastContainer'); const toast = document.createElement('div');
             let icon = 'fa-info-circle text-blue-500'; let border = 'border-blue-500'; let bgIcon = 'bg-blue-100';
