@@ -687,16 +687,12 @@
                 setSyncStatus(false);
             }
 
-            // =========================================================================
-            // UPDATE: PEMBERSIH / NORMALISASI DATA (Agar siswa baru bisa diklik)
-            // =========================================================================
+            // PEMBERSIH / NORMALISASI DATA (Agar siswa baru bisa diklik)
             studentsData.forEach(student => {
-                // Pastikan object scores selalu ada
                 if (!student.scores) {
                     student.scores = {};
                 }
                 
-                // Pastikan SEMUA array di dalam scores ada (Mencegah error 'length' saat diklik)
                 if (!student.scores.labels) student.scores.labels = [];
                 if (!student.scores.taktis) student.scores.taktis = [];
                 if (!student.scores.usaha) student.scores.usaha = [];
@@ -711,9 +707,6 @@
                 if (student.remedial === undefined) student.remedial = checkRemedialStatus(student);
             });
 
-            // =========================================================================
-            // UPDATE: Bikin Pilihan Dropdown Kelas Jadi Otomatis Baca Dari Data
-            // =========================================================================
             populateMainClassSelector(); 
             populateRekapDropdown(); 
             
@@ -733,7 +726,6 @@
             const classSelector = document.getElementById('classSelector');
             classSelector.innerHTML = '';
             
-            // Ambil nama-nama kelas yang unik lalu urutkan
             const uniqueClasses = [...new Set(studentsData.map(s => s.kelas))].sort();
             
             if (uniqueClasses.length > 0) {
@@ -744,7 +736,7 @@
                     classSelector.appendChild(option);
                 });
                 if(!currentClass || !uniqueClasses.includes(currentClass)) {
-                    currentClass = uniqueClasses[0]; // Set default ke kelas pertama
+                    currentClass = uniqueClasses[0];
                 }
                 classSelector.value = currentClass;
             } else {
@@ -852,7 +844,6 @@
 
             checkPendingData(); btnSync.innerHTML = oriText; btnSync.disabled = false;
         }
-        // ----------------------------- //
 
         function setSyncStatus(isSuccess) {
             const syncBadge = document.getElementById("syncStatus");
@@ -860,30 +851,69 @@
             else { syncBadge.className = "text-[10px] bg-red-100 text-red-700 px-2 py-0.5 rounded-full font-bold border border-red-200 shadow-sm flex items-center gap-1"; syncBadge.innerHTML = `<i class="fas fa-exclamation-triangle"></i> Demo`; }
         }
 
+        // ================================================================================
+        // UPDATE BARU: Mencegah bug 1 absen terhitung 7 hari dengan memfilter via Nama/NIS
+        // ================================================================================
         function updateAttendanceStats(student) {
             const att = student.attendance || []; 
-            const total = att.length;
+            let h = 0, i = 0, a = 0; 
+            let validRecords = 0; 
+
+            // Melakukan looping ke semua data absen yang diterima dari backend
+            att.forEach(st => { 
+                let statusStr = "";
+                let isForThisStudent = true; // Default true, penting untuk data String "Hadir" hasil Optimistic UI
+
+                if (typeof st === 'string') {
+                    statusStr = st.trim().toLowerCase();
+                } else if (typeof st === 'object' && st !== null) {
+                    // Cek ID atau Nama dari data backend untuk dicocokkan dengan siswa saat ini
+                    const recNis = String(st.studentId || st.nis || st.NIS || "").trim();
+                    const recName = String(st.studentName || st.nama || st.name || st.namaSiswa || "").trim().toLowerCase();
+                    const currNis = String(student.nis || "").trim();
+                    const currName = String(student.name || "").trim().toLowerCase();
+
+                    // Jika objek yang diterima memiliki identitas, pastikan identitasnya cocok
+                    const hasIdentifier = recNis !== "" || recName !== "";
+                    if (hasIdentifier) {
+                        const matchNis = recNis !== "" && recNis === currNis;
+                        // Kita gunakan includes juga agar lebih toleran kalau ada beda penulisan spasinya
+                        const matchName = recName !== "" && (recName === currName || recName.includes(currName) || currName.includes(recName));
+                        
+                        // Jika ternyata BUKAN NIS dia dan BUKAN Nama dia, abaikan data ini
+                        // (Berarti ini data absen milik anak lain di kelas 1A)
+                        if (!matchNis && !matchName) {
+                            isForThisStudent = false; 
+                        }
+                    }
+                    
+                    statusStr = String(st.status || st.kehadiran || st.keterangan || "").trim().toLowerCase();
+                }
+
+                // Jika data absen benar milik anak ini, barulah kita hitung ke dalam persentase
+                if (isForThisStudent && statusStr !== "") {
+                    if(statusStr === 'hadir' || statusStr === 'h') { 
+                        h++; validRecords++; 
+                    }
+                    else if(statusStr === 'izin' || statusStr === 'i' || statusStr === 'sakit' || statusStr === 's') { 
+                        i++; validRecords++; 
+                    }
+                    else if(statusStr === 'alpa' || statusStr === 'a') { 
+                        a++; validRecords++; 
+                    }
+                }
+            });
             
-            // Jika belum ada data absensi sama sekali
+            // Total yang dipakai untuk membagi persentase adalah total catatan dia saja, bukan 1 kelas
+            const total = validRecords;
+
             if(total === 0) { 
-                document.getElementById('statHadir').innerText = "0 (0%)"; 
-                document.getElementById('statIzin').innerText = "0 (0%)"; 
-                document.getElementById('statAlpa').innerText = "0 (0%)"; 
+                document.getElementById('statHadir').innerText = "0 Kali (0%)"; 
+                document.getElementById('statIzin').innerText = "0 Kali (0%)"; 
+                document.getElementById('statAlpa').innerText = "0 Kali (0%)"; 
                 return; 
             }
             
-            let h = 0, i = 0, a = 0; 
-            
-            // Menghitung jumlah masing-masing status
-            att.forEach(st => { 
-                // Menggunakan lowercase & trim untuk mencegah error jika ada spasi berlebih
-                const statusStr = String(st).trim().toLowerCase();
-                if(statusStr === 'hadir') h++; 
-                else if(statusStr === 'izin' || statusStr === 'sakit') i++; 
-                else if(statusStr === 'alpa') a++; 
-            });
-            
-            // Menampilkan Jumlah (Kuantitas) beserta Persentasenya agar logika lama tidak ada yang hilang
             document.getElementById('statHadir').innerText = h + " Kali (" + Math.round((h/total)*100) + "%)"; 
             document.getElementById('statIzin').innerText = i + " Kali (" + Math.round((i/total)*100) + "%)"; 
             document.getElementById('statAlpa').innerText = a + " Kali (" + Math.round((a/total)*100) + "%)";
@@ -914,7 +944,6 @@
 
         function changeTopic(index) { currentTopicIndex = parseInt(index); updateTopicUI(); }
 
-        // --- INTI PERUBAHAN: MENGUBAH UI MATRIKS BERDASARKAN STATUS INKLUSI SISWA AKTIF --- //
         function updateTopicUI() {
             const topics = classInfoData[currentClass];
             if (!topics || topics.length === 0) return;
@@ -1067,7 +1096,6 @@
             if (student.remedial) { rBadge.classList.remove('hidden'); rBanner.classList.remove('hidden'); } 
             else { rBadge.classList.add('hidden'); rBanner.classList.add('hidden'); }
 
-            // Gunakan String() agar tidak error jika status siswa dari database kosong
             const statusStr = String(student.status || 'Reguler').toLowerCase();
             const isInclusive = statusStr.includes('inklusi') || statusStr.includes('abk');
             const panelMod = document.getElementById('panelModifikasi');
@@ -1079,7 +1107,6 @@
                 document.getElementById('modAlat').checked = false; document.getElementById('modJarak').checked = false; document.getElementById('modAturan').checked = false; document.getElementById('modPendamping').checked = false;
             }
 
-            // Gunakan proteksi untuk membaca inisial nama yang belum diinput dengan benar
             const safeName = String(student.name || 'NN').trim();
             const initials = safeName.split(' ').filter(n => n.length > 0).map(n => n[0]).join('').substring(0,2).toUpperCase();
             document.getElementById('detailAvatar').innerText = initials;
@@ -1099,12 +1126,10 @@
             calculateRealtimeScore(); 
         }
 
-        // FUNGSI GRAFIK YANG SUDAH DI-UPDATE MENJADI RADAR CHART
         function updateChart(student) {
             const ctx = document.getElementById('progressChart').getContext('2d');
             if (chartInstance) chartInstance.destroy();
             
-            // Mengambil nama indikator dinamis dari UI
             const lbl1 = document.getElementById('labelIndikator0').innerText;
             const lbl2 = document.getElementById('labelIndikator1').innerText;
             const lbl3 = document.getElementById('labelIndikator2').innerText;
@@ -1112,7 +1137,6 @@
 
             const totalMinggu = student.scores.labels.length;
             
-            // Data Minggu Pertama (Baseline)
             const dataAwal = [
                 student.scores.taktis[0] || 0,
                 student.scores.usaha[0] || 0,
@@ -1120,7 +1144,6 @@
                 student.scores.kerjasama[0] || 0
             ];
 
-            // Data Minggu Terbaru (Progress)
             const labelTerbaru = totalMinggu > 0 ? student.scores.labels[totalMinggu - 1] : "Belum Ada Data";
             const dataTerbaru = [
                 student.scores.taktis[totalMinggu - 1] || 0,
@@ -1207,18 +1230,16 @@
             const btnSave = document.getElementById('btnSaveAbsensi'); 
             const originalBtnText = btnSave.innerHTML;
             
-            // [UPDATE] OPTIMISTIC UI: Layar langsung update dalam 0 detik tanpa nunggu loading
             if (!student.attendance) student.attendance = []; 
             student.attendance.push(kehadiran); 
             updateAttendanceStats(student); 
             
             btnSave.innerHTML = '<i class="fas fa-check"></i> Seketika Tersimpan'; 
-            btnSave.classList.replace('bg-emerald-600', 'bg-blue-600'); // Ubah warna sejenak jadi biru
+            btnSave.classList.replace('bg-emerald-600', 'bg-blue-600'); 
             setTimeout(() => { btnSave.innerHTML = originalBtnText; btnSave.classList.replace('bg-blue-600', 'bg-emerald-600'); }, 1500);
             
             showToast("Sinkronisasi...", `Data absensi dikirim ke server di latar belakang...`, "info");
 
-            // Fetch data dilepas di latar belakang
             fetch(SCRIPT_URL, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(payload) })
             .then(res => res.json())
             .then(result => {
@@ -1280,7 +1301,6 @@
 
             const btnSave = document.getElementById('btnSaveScore'); const originalBtnText = btnSave.innerHTML;
             
-            // [UPDATE] OPTIMISTIC UI: Grafik & Data seketika berubah di layar (0 Detik)
             const existingIndex = student.scores.labels.indexOf(newLabel);
             if (existingIndex !== -1) { student.scores.taktis[existingIndex] = s1; student.scores.usaha[existingIndex] = s2; student.scores.fisik[existingIndex] = s3; student.scores.kerjasama[existingIndex] = s4; } 
             else { student.scores.labels.push(newLabel); student.scores.taktis.push(s1); student.scores.usaha.push(s2); student.scores.fisik.push(s3); student.scores.kerjasama.push(s4); }
@@ -1298,12 +1318,11 @@
             calculateRealtimeScore(); selectStudent(currentStudentId); 
             
             btnSave.innerHTML = '<i class="fas fa-check"></i> Seketika Tersimpan'; 
-            btnSave.classList.replace('bg-blue-600', 'bg-green-600'); // Ganti warna sesaat
+            btnSave.classList.replace('bg-blue-600', 'bg-green-600'); 
             setTimeout(() => { btnSave.innerHTML = originalBtnText; btnSave.classList.replace('bg-green-600', 'bg-blue-600'); }, 1500);
 
             showToast("Sinkronisasi...", `Nilai dikirim ke server di latar belakang...`, "info");
 
-            // Dilepas ke latar belakang
             fetch(SCRIPT_URL, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(payload) })
             .then(res => res.json())
             .then(result => {
@@ -1319,9 +1338,6 @@
             });
         }
 
-        // =========================================================================
-        // FITUR CETAK RAPOR / PDF OTOMATIS (DENGAN TTD & KOP RESMI)
-        // =========================================================================
         async function cetakRaporKelas() {
             const selectedClass = document.getElementById('rekapClassDropdown').value;
             if (!selectedClass) { showToast("Peringatan", "Pilih kelas terlebih dahulu.", "error"); return; }
@@ -1345,7 +1361,6 @@
             const btn = document.getElementById('btnCetakRaporKelas'); const oriText = btn.innerHTML;
             btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Memproses PDF...'; btn.disabled = true;
             
-            // Notifikasi peringatan bahwa sistem Google memang butuh beberapa detik untuk merakit PDF
             showToast("Memproses Dokumen...", "Mohon tunggu sejenak, server Google sedang menyusun file PDF...", "info");
             
             const payload = { 
