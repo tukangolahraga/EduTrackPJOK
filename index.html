@@ -274,9 +274,9 @@
                                 <span class="px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600" id="detailStatus">Status</span>
                             </div>
                             <div class="flex items-center gap-2 mt-2 flex-wrap" id="attendanceStats">
-                                <span class="bg-green-100 text-green-700 px-2 py-0.5 rounded-md text-[11px] font-bold border border-green-200 shadow-sm"><i class="fas fa-check-circle mr-1"></i>Hadir: <span id="statHadir">0%</span></span>
-                                <span class="bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-md text-[11px] font-bold border border-yellow-200 shadow-sm"><i class="fas fa-envelope mr-1"></i>Izin/Sakit: <span id="statIzin">0%</span></span>
-                                <span class="bg-red-100 text-red-700 px-2 py-0.5 rounded-md text-[11px] font-bold border border-red-200 shadow-sm"><i class="fas fa-times-circle mr-1"></i>Alpa: <span id="statAlpa">0%</span></span>
+                                <span class="bg-green-100 text-green-700 px-2 py-0.5 rounded-md text-[11px] font-bold border border-green-200 shadow-sm"><i class="fas fa-check-circle mr-1"></i>Hadir: <span id="statHadir">0 (0%)</span></span>
+                                <span class="bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-md text-[11px] font-bold border border-yellow-200 shadow-sm"><i class="fas fa-envelope mr-1"></i>Izin/Sakit: <span id="statIzin">0 (0%)</span></span>
+                                <span class="bg-red-100 text-red-700 px-2 py-0.5 rounded-md text-[11px] font-bold border border-red-200 shadow-sm"><i class="fas fa-times-circle mr-1"></i>Alpa: <span id="statAlpa">0 (0%)</span></span>
                             </div>
                         </div>
                     </div>
@@ -861,10 +861,32 @@
         }
 
         function updateAttendanceStats(student) {
-            const att = student.attendance || []; const total = att.length;
-            if(total === 0) { document.getElementById('statHadir').innerText = "0%"; document.getElementById('statIzin').innerText = "0%"; document.getElementById('statAlpa').innerText = "0%"; return; }
-            let h = 0, i = 0, a = 0; att.forEach(st => { if(st === 'Hadir') h++; else if(st === 'Izin' || st === 'Sakit') i++; else if(st === 'Alpa') a++; });
-            document.getElementById('statHadir').innerText = Math.round((h/total)*100) + "%"; document.getElementById('statIzin').innerText = Math.round((i/total)*100) + "%"; document.getElementById('statAlpa').innerText = Math.round((a/total)*100) + "%";
+            const att = student.attendance || []; 
+            const total = att.length;
+            
+            // Jika belum ada data absensi sama sekali
+            if(total === 0) { 
+                document.getElementById('statHadir').innerText = "0 (0%)"; 
+                document.getElementById('statIzin').innerText = "0 (0%)"; 
+                document.getElementById('statAlpa').innerText = "0 (0%)"; 
+                return; 
+            }
+            
+            let h = 0, i = 0, a = 0; 
+            
+            // Menghitung jumlah masing-masing status
+            att.forEach(st => { 
+                // Menggunakan lowercase & trim untuk mencegah error jika ada spasi berlebih
+                const statusStr = String(st).trim().toLowerCase();
+                if(statusStr === 'hadir') h++; 
+                else if(statusStr === 'izin' || statusStr === 'sakit') i++; 
+                else if(statusStr === 'alpa') a++; 
+            });
+            
+            // Menampilkan Jumlah (Kuantitas) beserta Persentasenya agar logika lama tidak ada yang hilang
+            document.getElementById('statHadir').innerText = h + " Kali (" + Math.round((h/total)*100) + "%)"; 
+            document.getElementById('statIzin').innerText = i + " Kali (" + Math.round((i/total)*100) + "%)"; 
+            document.getElementById('statAlpa').innerText = a + " Kali (" + Math.round((a/total)*100) + "%)";
         }
 
         function calculateRealtimeScore() {
